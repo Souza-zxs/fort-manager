@@ -85,7 +85,7 @@ const Integracoes = () => {
   const navigate = useNavigate();
 
   const mercadoLivreConfigured = useMemo(
-    () => Boolean(import.meta.env.VITE_ML_CLIENT_ID && import.meta.env.VITE_ML_CLIENT_SECRET),
+    () => Boolean(import.meta.env.MELI_APP_ID && import.meta.env.MELI_CLIENT_SECRET),
     []
   );
 
@@ -101,7 +101,7 @@ const Integracoes = () => {
           ? {
               ...m,
               connected: true,
-              apiKey: import.meta.env.VITE_ML_CLIENT_ID ?? "",
+              apiKey: import.meta.env.MELI_APP_ID ?? "",
               secretKey: "********",
               shopId: storedAccount.userId,
               lastSync: new Date().toLocaleString("pt-BR"),
@@ -164,7 +164,7 @@ const Integracoes = () => {
               ? {
                   ...m,
                   connected: true,
-                  apiKey: import.meta.env.VITE_ML_CLIENT_ID ?? "",
+                  apiKey: import.meta.env.MELI_APP_ID ?? "",
                   secretKey: "********",
                   shopId: userId,
                   lastSync: new Date().toLocaleString("pt-BR"),
@@ -203,7 +203,7 @@ const Integracoes = () => {
   const handleConnect = (id: string) => {
     if (id === "mercadolivre") {
       if (!mercadoLivreConfigured) {
-        const message = "Configure VITE_ML_CLIENT_ID e VITE_ML_CLIENT_SECRET no .env.local antes de conectar.";
+        const message = "Configure ML_APP_ID e ML_CLIENT_SECRET no .env.local antes de conectar.";
         setMercadoLivreError(message);
         toast({ title: "Credenciais nao configuradas", description: message, variant: "destructive" });
         return;
