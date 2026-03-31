@@ -1,4 +1,4 @@
-export type MarketplaceName = 'shopee' | 'tiktok';
+export type MarketplaceName = 'shopee' | 'mercadolivre';
 
 export type OrderStatus =
   | 'UNPAID'

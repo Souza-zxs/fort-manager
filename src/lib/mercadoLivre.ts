@@ -1,3 +1,6 @@
+import axios from "axios";
+
+
 const ML_AUTH_BASE = import.meta.env.VITE_ML_AUTH_URL?.trim() || "https://auth.mercadolibre.com/authorization";
 // Se VITE_API_URL não estiver definido, usa a mesma origem (funciona na Vercel)
 const API_BASE = import.meta.env.VITE_API_URL?.trim() || (typeof window !== 'undefined' ? window.location.origin : "http://localhost:3001");
@@ -15,6 +18,7 @@ interface MercadoLivreTokenResponse {
   scope: string;
   user_id: number;
   refresh_token: string;
+  json: string;
 }
 
 interface MercadoLivreUser {
@@ -59,18 +63,17 @@ export async function exchangeCodeForToken(code: string): Promise<void> {
     redirect_uri: redirectUri,
   });
 
-  const response = await fetch("https://api.mercadolibre.com/oauth/token", {
+  const response = await axios.post("https://api.mercadolibre.com/oauth/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Falha ao gerar token do Mercado Livre: ${errorText || response.status}`);
+  if (response.status !== 200) {
+    throw new Error(`Falha ao gerar token do Mercado Livre: ${response.status}`);
   }
 
-  const data = (await response.json()) as MercadoLivreTokenResponse;
+  const data = response.data as MercadoLivreTokenResponse;
   const expiresAt = Date.now() + data.expires_in * 1000;
 
   localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
@@ -102,12 +105,12 @@ export async function fetchCurrentUser(): Promise<MercadoLivreUser> {
   return data;
 }
 
-export function getStoredMercadoLivreAccount(): { userId: string; nickname: string | null } | null {
+export function getStoredMercadoLivreAccount(): { userId: string; nickname: string }  {
   const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
   const userId = localStorage.getItem(USER_ID_KEY);
 
   if (!accessToken || !userId) {
-    return null;
+    return { userId: "", nickname: "" };
   }
 
   return { userId, nickname: localStorage.getItem(NICKNAME_KEY) };
@@ -121,7 +124,7 @@ export function clearMercadoLivreSession(): void {
   localStorage.removeItem(NICKNAME_KEY);
 }
 
-export async function fetchMercadoLivreItems(): Promise<any> {
+export async function fetchMercadoLivreItems(): Promise<string> {
   const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
   const userId = localStorage.getItem(USER_ID_KEY);
 
@@ -141,7 +144,7 @@ export async function fetchMercadoLivreItems(): Promise<any> {
   return response.json();
 }
 
-export async function fetchMercadoLivreOrders(): Promise<any> {
+export async function fetchMercadoLivreOrders(): Promise<string> {
   const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
   const userId = localStorage.getItem(USER_ID_KEY);
 
@@ -161,31 +164,30 @@ export async function fetchMercadoLivreOrders(): Promise<any> {
   return response.json();
 }
 
-export async function createMercadoLivreItem(itemData: any): Promise<any> {
+export async function createMercadoLivreItem(itemData: string): Promise<string> {
   const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
 
   if (!accessToken) {
     throw new Error("Token do Mercado Livre nao encontrado.");
   }
 
-  const response = await fetch("https://api.mercadolibre.com/items", {
-    method: "POST",
+  const response = await axios.post("https://api.mercadolibre.com/items", {
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
+      "Content-Type": "application/json"
     },
-    body: JSON.stringify(itemData),
+    data: itemData,
   });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: "Erro desconhecido" }));
+  if (response.status !== 200) {
+    const errorData = response.data as { error: string };
     throw new Error(`Falha ao criar produto: ${errorData.error || response.status}`);
   }
 
-  return response.json();
+  return response.data.id;
 }
 
-export async function fetchMercadoLivreAddresses(): Promise<any> {
+export async function fetchMercadoLivreAddresses(): Promise<string> {
   const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
   const userId = localStorage.getItem(USER_ID_KEY);
 
@@ -193,38 +195,37 @@ export async function fetchMercadoLivreAddresses(): Promise<any> {
     throw new Error("Token do Mercado Livre nao encontrado.");
   }
 
-  const response = await fetch(`https://api.mercadolibre.com/users/${userId}/addresses`, {
+  const response = await axios.get(`https://api.mercadolibre.com/users/${userId}/addresses`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Falha ao buscar enderecos: ${errorText || response.status}`);
+  if (response.status !== 200) {
+    const errorData = response.data as { error: string };
+    throw new Error(`Falha ao buscar enderecos: ${errorData.error || response.status}`);
   }
 
-  return response.json();
+  return response.data;
 }
 
-export async function addMercadoLivreDescription(itemId: string, description: string): Promise<any> {
+export async function addMercadoLivreDescription(itemId: string, description: string): Promise<string> {
   const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
 
   if (!accessToken) {
     throw new Error("Token do Mercado Livre nao encontrado.");
   }
 
-  const response = await fetch(`https://api.mercadolibre.com/items/${itemId}/description`, {
-    method: "POST",
+  const response = await axios.post(`https://api.mercadolibre.com/items/${itemId}/description`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
+      "Content-Type": "application/json"
     },
-    body: JSON.stringify({ plain_text: description }),
+    data: { plain_text: description },
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Falha ao adicionar descricao: ${errorText || response.status}`);
+  if (response.status !== 200) {
+    const errorData = response.data as { error: string };
+    throw new Error(`Falha ao adicionar descricao: ${errorData.error || response.status}`);
   }
 
-  return response.json();
+  return response.data;
 }

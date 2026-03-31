@@ -22,8 +22,8 @@ interface AuthenticatedRequest extends Request {
 }
 
 function assertMarketplace(value: string): asserts value is MarketplaceName {
-  if (value !== 'shopee' && value !== 'tiktok') {
-    throw new BadRequestError(`Invalid marketplace: ${value}`);
+  if (value !== 'shopee' && value !== 'mercadolivre') {
+    throw new BadRequestError(`Invalid marketplace: ${value}. Supported: shopee, mercadolivre`);
   }
 }
 

@@ -7,16 +7,21 @@ export interface AuthenticatedRequest extends Request {
   headers: {
     authorization?: string;
   };
+  params: {
+    marketplace: string;
+    id: string;
+  };
+  query: {
+    code?: string;
+    shop_id?: string;
+  };
 
 }
 
-export interface AuthenticatedResponse extends Response {
-  status (code: number): AuthenticatedResponse;
-  json: (body: { status: string; message: string }) => AuthenticatedResponse; 
-}
+export type AuthenticatedResponse = Response;
 
 export async function authMiddleware(
-  req: Response,
+  req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> {

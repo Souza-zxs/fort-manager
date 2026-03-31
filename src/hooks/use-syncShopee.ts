@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../api/marketplaces/infra/database/supabase';
+import { supabase } from '@/lib/supabase';
 
 export interface SyncedOrder {
   id: string;

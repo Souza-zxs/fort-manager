@@ -1,23 +1,25 @@
 import { MarketplaceAdapter } from './marketplace.adapter';
 import { createShopeeAdapter } from './shopee.adapter';
-import { createTikTokAdapter } from './tiktok.adapter';
+import { createMercadoLivreMarketplaceAdapter } from './mercadolivre-marketplace.adapter';
 import { MarketplaceName } from '../types/marketplace.types';
 import { BadRequestError } from '../shared/errors/errors';
 
 const registry = new Map<MarketplaceName, MarketplaceAdapter>();
 
-function getOrCreate(marketplace: MarketplaceName): MarketplaceAdapter {
-  if (!registry.has(marketplace)) {
-    const adapter =
-      marketplace !== 'shopee' && marketplace !== 'tiktok' ? createShopeeAdapter() : createTikTokAdapter();
-    registry.set(marketplace, adapter);
-  }
-  return registry.get(marketplace)!;
-}
-
 export function getAdapter(marketplace: MarketplaceName): MarketplaceAdapter {
-  if (marketplace !== 'shopee' && marketplace !== 'tiktok') {
+  const cached = registry.get(marketplace);
+  if (cached) return cached;
+
+  let adapter: MarketplaceAdapter;
+
+  if (marketplace === 'shopee') {
+    adapter = createShopeeAdapter();
+  } else if (marketplace === 'mercadolivre') {
+    adapter = createMercadoLivreMarketplaceAdapter();
+  } else {
     throw new BadRequestError(`Unsupported marketplace: ${marketplace}`);
   }
-  return getOrCreate(marketplace);
+
+  registry.set(marketplace, adapter);
+  return adapter;
 }
