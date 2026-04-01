@@ -1,332 +1,119 @@
-import { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { 
-  Link2, RefreshCw, Settings, CheckCircle2, XCircle, 
-  ArrowUpDown, Package, ShoppingCart, TrendingUp, Clock, Plus, Activity
+import {
+  Link2, RefreshCw, Settings, CheckCircle2, XCircle,
+  ArrowUpDown, ShoppingCart, Clock, Plus, Activity, Loader2, AlertCircle,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
-import { useLocation, useNavigate } from "react-router-dom";
 import shopeeLogo from "@/assets/shopee-logo.png";
 import mercadoLivreLogo from "@/assets/mercadolivre-logo.png";
 import {
-  clearMercadoLivreSession,
-  exchangeCodeForToken,
-  fetchCurrentUser,
-  fetchMercadoLivreItems,
-  fetchMercadoLivreOrders,
-  getMercadoLivreAuthUrl,
-  getStoredMercadoLivreAccount,
-} from "@/lib/mercadoLivre";
+  useIntegrations,
+  useStartOAuth,
+  useDisconnect,
+  useTriggerSync,
+  marketplaceLabel,
+} from "@/hooks/useMarketplaces";
+import type { IntegrationDto } from "@/lib/marketplaceApi";
 
-interface MarketplaceConfig {
+// ── Configuração estática de cada marketplace ─────────────────────────────────
+
+interface MarketplaceMeta {
   id: string;
   name: string;
   logo: string;
-  connected: boolean;
-  apiKey: string;
-  secretKey: string;
-  shopId: string;
-  autoSync: boolean;
-  syncInterval: string;
-  lastSync: string | null;
-  stats: {
-    products: number;
-    orders: number;
-    revenue: string;
-  };
   color: string;
+  description: string;
 }
 
-const initialMarketplaces: MarketplaceConfig[] = [
-  {
-    id: "shopee",
-    name: "Shopee",
-    logo: shopeeLogo,
-    connected: false,
-    apiKey: "",
-    secretKey: "",
-    shopId: "",
-    autoSync: false,
-    syncInterval: "30",
-    lastSync: null,
-    stats: { products: 0, orders: 0, revenue: "R$ 0,00" },
-    color: "bg-orange-500",
-  },
+const MARKETPLACE_META: MarketplaceMeta[] = [
   {
     id: "mercadolivre",
     name: "Mercado Livre",
     logo: mercadoLivreLogo,
-    connected: false,
-    apiKey: "",
-    secretKey: "",
-    shopId: "",
-    autoSync: false,
-    syncInterval: "30",
-    lastSync: null,
-    stats: { products: 0, orders: 0, revenue: "R$ 0,00" },
     color: "bg-yellow-500",
+    description:
+      "Conecte sua conta do Mercado Livre para sincronizar anúncios, pedidos e financeiro automaticamente.",
+  },
+  {
+    id: "shopee",
+    name: "Shopee",
+    logo: shopeeLogo,
+    color: "bg-orange-500",
+    description:
+      "Conecte sua loja Shopee para sincronizar pedidos, taxas e relatórios financeiros.",
   },
 ];
 
+// ── Componente principal ──────────────────────────────────────────────────────
+
 const Integracoes = () => {
-  const [marketplaces, setMarketplaces] = useState<MarketplaceConfig[]>(initialMarketplaces);
-  const [configOpen, setConfigOpen] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ apiKey: "", secretKey: "", shopId: "" });
-  const [isConnectingMercadoLivre, setIsConnectingMercadoLivre] = useState(false);
-  const [mercadoLivreError, setMercadoLivreError] = useState<string | null>(null);
-  const [didProcessOAuth, setDidProcessOAuth] = useState(false);
-  const { toast } = useToast();
-  const location = useLocation();
   const navigate = useNavigate();
 
-  const mercadoLivreConfigured = useMemo(
-    () => Boolean(import.meta.env.MELI_APP_ID && import.meta.env.MELI_CLIENT_SECRET),
-    []
-  );
+  // Sincronização automática (estado local por enquanto)
+  const [autoSync, setAutoSync] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    const storedAccount = getStoredMercadoLivreAccount();
-    if (!storedAccount) {
-      return;
-    }
+  // ── Queries / Mutations ───────────────────────────────────────────────────
 
-    setMarketplaces((prev) =>
-      prev.map((m) =>
-        m.id === "mercadolivre"
-          ? {
-              ...m,
-              connected: true,
-              apiKey: import.meta.env.MELI_APP_ID ?? "",
-              secretKey: "********",
-              shopId: storedAccount.userId,
-              lastSync: new Date().toLocaleString("pt-BR"),
-            }
-          : m
-      )
-    );
-  }, []);
+  const { data: integrations = [], isLoading, error } = useIntegrations();
+  const startOAuth  = useStartOAuth();
+  const disconnect  = useDisconnect();
+  const triggerSync = useTriggerSync();
 
-  useEffect(() => {
-    if (didProcessOAuth) {
-      return;
-    }
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
-    const params = new URLSearchParams(location.search);
-    const oauthCode = params.get("code");
-    const oauthError = params.get("error");
+  function findIntegration(marketplaceId: string): IntegrationDto | undefined {
+    return integrations.find((i) => i.marketplace === marketplaceId && i.isActive);
+  }
 
-    if (!oauthCode && !oauthError) {
-      setDidProcessOAuth(true);
-      return;
-    }
+  const handleConnect    = (marketplace: string) => startOAuth.mutate(marketplace);
+  const handleDisconnect = (integration: IntegrationDto) => disconnect.mutate(integration.id);
+  const handleSyncNow    = (integration: IntegrationDto) => triggerSync.mutate(integration.id);
+  const toggleAutoSync   = (id: string) =>
+    setAutoSync((prev) => ({ ...prev, [id]: !prev[id] }));
 
-    async function handleOAuthCallback() {
-      if (oauthError) {
-        setMercadoLivreError(`Autorizacao recusada: ${oauthError}`);
-        toast({ title: "Falha ao autorizar Mercado Livre", description: oauthError, variant: "destructive" });
-        setDidProcessOAuth(true);
-        navigate("/integracoes", { replace: true });
-        return;
-      }
+  // ── Render ────────────────────────────────────────────────────────────────
 
-      if (!oauthCode) {
-        setDidProcessOAuth(true);
-        return;
-      }
-
-      try {
-        setIsConnectingMercadoLivre(true);
-        setMercadoLivreError(null);
-        await exchangeCodeForToken(oauthCode);
-        
-        let userId = "";
-        let nickname = "";
-        
-        try {
-          const user = await fetchCurrentUser();
-          userId = String(user.id);
-          nickname = user.nickname;
-        } catch (userError) {
-          console.warn("Nao foi possivel buscar dados do usuario (CORS), usando user_id do token:", userError);
-          const storedAccount = getStoredMercadoLivreAccount();
-          userId = storedAccount?.userId || "";
-          nickname = storedAccount?.nickname || "";
-        }
-
-        setMarketplaces((prev) =>
-          prev.map((m) =>
-            m.id === "mercadolivre"
-              ? {
-                  ...m,
-                  connected: true,
-                  apiKey: import.meta.env.MELI_APP_ID ?? "",
-                  secretKey: "********",
-                  shopId: userId,
-                  lastSync: new Date().toLocaleString("pt-BR"),
-                  stats: {
-                    products: Math.floor(Math.random() * 50) + 10,
-                    orders: Math.floor(Math.random() * 200) + 30,
-                    revenue: `R$ ${(Math.random() * 50000 + 5000).toFixed(2).replace(".", ",")}`,
-                  },
-                }
-              : m
-          )
-        );
-
-        toast({
-          title: "Mercado Livre conectado",
-          description: nickname ? `Conta ${nickname} vinculada com sucesso.` : "Conta vinculada com sucesso.",
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Erro inesperado ao conectar com Mercado Livre.";
-        setMercadoLivreError(message);
-        toast({
-          title: "Nao foi possivel conectar",
-          description: message,
-          variant: "destructive",
-        });
-      } finally {
-        setDidProcessOAuth(true);
-        setIsConnectingMercadoLivre(false);
-        navigate("/integracoes", { replace: true });
-      }
-    }
-
-    void handleOAuthCallback();
-  }, [didProcessOAuth, location.search, navigate, toast]);
-
-  const handleConnect = (id: string) => {
-    if (id === "mercadolivre") {
-      if (!mercadoLivreConfigured) {
-        const message = "Configure ML_APP_ID e ML_CLIENT_SECRET no .env.local antes de conectar.";
-        setMercadoLivreError(message);
-        toast({ title: "Credenciais nao configuradas", description: message, variant: "destructive" });
-        return;
-      }
-
-      setMercadoLivreError(null);
-      setIsConnectingMercadoLivre(true);
-
-      try {
-        window.location.href = getMercadoLivreAuthUrl();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Nao foi possivel iniciar autenticacao.";
-        setIsConnectingMercadoLivre(false);
-        setMercadoLivreError(message);
-        toast({ title: "Falha ao iniciar conexao", description: message, variant: "destructive" });
-      }
-      return;
-    }
-
-    setMarketplaces((prev) =>
-      prev.map((m) =>
-        m.id === id
-          ? {
-              ...m,
-              connected: true,
-              apiKey: formData.apiKey,
-              secretKey: formData.secretKey,
-              shopId: formData.shopId,
-              lastSync: new Date().toLocaleString("pt-BR"),
-              stats: {
-                products: Math.floor(Math.random() * 50) + 10,
-                orders: Math.floor(Math.random() * 200) + 30,
-                revenue: `R$ ${(Math.random() * 50000 + 5000).toFixed(2).replace(".", ",")}`,
-              },
-            }
-          : m
-      )
-    );
-    setFormData({ apiKey: "", secretKey: "", shopId: "" });
-    setConfigOpen(null);
-  };
-
-  const handleDisconnect = (id: string) => {
-    if (id === "mercadolivre") {
-      clearMercadoLivreSession();
-      setMercadoLivreError(null);
-    }
-
-    setMarketplaces((prev) =>
-      prev.map((m) =>
-        m.id === id
-          ? { ...m, connected: false, apiKey: "", secretKey: "", shopId: "", lastSync: null, stats: { products: 0, orders: 0, revenue: "R$ 0,00" } }
-          : m
-      )
-    );
-  };
-
-  const toggleAutoSync = (id: string) => {
-    setMarketplaces((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, autoSync: !m.autoSync } : m))
-    );
-  };
-
-  const handleSyncNow = async (id: string) => {
-    if (id !== "mercadolivre") {
-      toast({ title: "Sincronização não implementada", description: "Em breve para outros marketplaces" });
-      return;
-    }
-
-    try {
-      toast({ title: "Sincronizando...", description: "Buscando dados do Mercado Livre" });
-
-      const [itemsData, ordersData] = await Promise.all([
-        fetchMercadoLivreItems(),
-        fetchMercadoLivreOrders(),
-      ]);
-
-      const totalProducts = itemsData.paging?.total || 0;
-      const totalOrders = ordersData.paging?.total || 0;
-      
-      const revenue = ordersData.results?.reduce((sum: number, order: any) => {
-        return sum + (order.total_amount || 0);
-      }, 0) || 0;
-
-      setMarketplaces((prev) =>
-        prev.map((m) =>
-          m.id === id
-            ? {
-                ...m,
-                lastSync: new Date().toLocaleString("pt-BR"),
-                stats: {
-                  products: totalProducts,
-                  orders: totalOrders,
-                  revenue: `R$ ${revenue.toFixed(2).replace(".", ",")}`,
-                },
-              }
-            : m
-        )
-      );
-
-      toast({
-        title: "Sincronização concluída",
-        description: `${totalProducts} produtos e ${totalOrders} pedidos sincronizados.`,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao sincronizar dados";
-      toast({
-        title: "Falha na sincronização",
-        description: message,
-        variant: "destructive",
-      });
-    }
-  };
+  const connectedCount    = integrations.filter((i) => i.isActive).length;
+  const isCallbackLoading = false; // callback agora é tratado em /auth/callback
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Integrações</h1>
-        <p className="text-muted-foreground text-sm mt-1">Conecte seus marketplaces e sincronize produtos e pedidos</p>
+        <p className="text-muted-foreground text-sm mt-1">
+          Conecte seus marketplaces e sincronize produtos e pedidos
+        </p>
       </div>
 
+      {/* Callback em progresso */}
+      {isCallbackLoading && (
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-primary/30 bg-primary/10 text-primary text-sm">
+          <Loader2 size={16} className="animate-spin shrink-0" />
+          Finalizando conexão com o marketplace…
+        </div>
+      )}
+
+      {/* Erro de sessão */}
+      {error && (
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-sm">
+          <AlertCircle size={16} className="shrink-0" />
+          {error instanceof Error ? error.message : "Erro ao carregar integrações."}
+          {error instanceof Error && error.message.includes("Sessão") && (
+            <span className="ml-1 font-medium">
+              Certifique-se de estar logado no Supabase.
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="gradient-card border-border/50">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/15">
@@ -334,18 +121,9 @@ const Integracoes = () => {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Marketplaces Conectados</p>
-              <p className="text-xl font-bold text-foreground">{marketplaces.filter((m) => m.connected).length}/{marketplaces.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="gradient-card border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-500/15">
-              <ArrowUpDown size={20} className="text-green-500" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Produtos Sincronizados</p>
-              <p className="text-xl font-bold text-foreground">{marketplaces.reduce((a, m) => a + m.stats.products, 0)}</p>
+              <p className="text-xl font-bold text-foreground">
+                {isLoading ? "—" : `${connectedCount}/${MARKETPLACE_META.length}`}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -355,8 +133,10 @@ const Integracoes = () => {
               <ShoppingCart size={20} className="text-blue-500" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Pedidos Totais</p>
-              <p className="text-xl font-bold text-foreground">{marketplaces.reduce((a, m) => a + m.stats.orders, 0)}</p>
+              <p className="text-xs text-muted-foreground">Integrações Ativas</p>
+              <p className="text-xl font-bold text-foreground">
+                {isLoading ? "—" : connectedCount}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -364,171 +144,248 @@ const Integracoes = () => {
 
       {/* Marketplace Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {marketplaces.map((marketplace) => (
-          <Card key={marketplace.id} className="gradient-card border-border/50 overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img src={marketplace.logo} alt={marketplace.name} className="h-12 w-12 object-contain rounded-lg bg-white p-1" />
-                  <div>
-                    <CardTitle className="text-lg">{marketplace.name}</CardTitle>
-                    <CardDescription className="flex items-center gap-1.5 mt-0.5">
-                      {marketplace.connected ? (
-                        <>
-                          <CheckCircle2 size={12} className="text-green-500" />
-                          <span className="text-green-500 text-xs">Conectado</span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle size={12} className="text-muted-foreground" />
-                          <span className="text-xs">Desconectado</span>
-                        </>
-                      )}
-                    </CardDescription>
+        {MARKETPLACE_META.map((meta) => {
+          const integration  = findIntegration(meta.id);
+          const isConnected  = Boolean(integration);
+          const isSyncing    = triggerSync.isPending && triggerSync.variables === integration?.id;
+          const isConnecting = startOAuth.isPending && startOAuth.variables === meta.id;
+
+          return (
+            <Card key={meta.id} className="gradient-card border-border/50 overflow-hidden">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={meta.logo}
+                      alt={meta.name}
+                      className="h-12 w-12 object-contain rounded-lg bg-white p-1"
+                    />
+                    <div>
+                      <CardTitle className="text-lg">{meta.name}</CardTitle>
+                      <CardDescription className="flex items-center gap-1.5 mt-0.5">
+                        {isConnected ? (
+                          <>
+                            <CheckCircle2 size={12} className="text-green-500" />
+                            <span className="text-green-500 text-xs">Conectado</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle size={12} className="text-muted-foreground" />
+                            <span className="text-xs">Desconectado</span>
+                          </>
+                        )}
+                      </CardDescription>
+                    </div>
                   </div>
+                  <Badge
+                    variant={isConnected ? "default" : "secondary"}
+                    className={
+                      isConnected
+                        ? "bg-green-500/20 text-green-400 border-green-500/30"
+                        : ""
+                    }
+                  >
+                    {isConnected ? "Ativo" : "Inativo"}
+                  </Badge>
                 </div>
-                <Badge variant={marketplace.connected ? "default" : "secondary"} className={marketplace.connected ? "bg-green-500/20 text-green-400 border-green-500/30" : ""}>
-                  {marketplace.connected ? "Ativo" : "Inativo"}
-                </Badge>
-              </div>
-            </CardHeader>
+              </CardHeader>
 
-            <CardContent className="space-y-4">
-              {marketplace.connected ? (
-                <>
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-secondary/50 rounded-lg p-3 text-center">
-                      <Package size={16} className="mx-auto text-muted-foreground mb-1" />
-                      <p className="text-lg font-bold text-foreground">{marketplace.stats.products}</p>
-                      <p className="text-[10px] text-muted-foreground">Produtos</p>
+              <CardContent className="space-y-4">
+                {isConnected && integration ? (
+                  <>
+                    {/* Info da loja conectada */}
+                    <div className="bg-secondary/50 rounded-lg p-3 space-y-1">
+                      <p className="text-xs text-muted-foreground">Loja conectada</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {integration.shopName || `ID: ${integration.shopId}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Conectado em{" "}
+                        {new Date(integration.createdAt).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </p>
                     </div>
-                    <div className="bg-secondary/50 rounded-lg p-3 text-center">
-                      <ShoppingCart size={16} className="mx-auto text-muted-foreground mb-1" />
-                      <p className="text-lg font-bold text-foreground">{marketplace.stats.orders}</p>
-                      <p className="text-[10px] text-muted-foreground">Pedidos</p>
-                    </div>
-                    <div className="bg-secondary/50 rounded-lg p-3 text-center">
-                      <TrendingUp size={16} className="mx-auto text-muted-foreground mb-1" />
-                      <p className="text-sm font-bold text-foreground">{marketplace.stats.revenue}</p>
-                      <p className="text-[10px] text-muted-foreground">Faturamento</p>
-                    </div>
-                  </div>
 
-                  {/* Sync Settings */}
-                  <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-3">
-                    <div className="flex items-center gap-2">
-                      <RefreshCw size={14} className="text-muted-foreground" />
-                      <span className="text-sm text-foreground">Sincronização automática</span>
+                    {/* Sincronização automática */}
+                    <div className="flex items-center justify-between bg-secondary/30 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <RefreshCw size={14} className="text-muted-foreground" />
+                        <span className="text-sm text-foreground">Sincronização automática</span>
+                      </div>
+                      <Switch
+                        checked={autoSync[meta.id] ?? false}
+                        onCheckedChange={() => toggleAutoSync(meta.id)}
+                      />
                     </div>
-                    <Switch checked={marketplace.autoSync} onCheckedChange={() => toggleAutoSync(marketplace.id)} />
-                  </div>
 
-                  {marketplace.lastSync && (
+                    {/* Última sync */}
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Clock size={12} />
-                      <span>Última sincronização: {marketplace.lastSync}</span>
+                      <span>Integração ativa desde {new Date(integration.createdAt).toLocaleString("pt-BR")}</span>
                     </div>
-                  )}
 
-                  <div className="space-y-2">
-                    {marketplace.id === "mercadolivre" && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button size="sm" className="w-full" onClick={() => navigate("/integracoes/adicionar-produto")}>
-                          <Plus size={14} />
-                          Adicionar Produto
-                        </Button>
-                        <Button size="sm" variant="outline" className="w-full" onClick={() => navigate("/integracoes/diagnostico")}>
-                          <Activity size={14} />
-                          Diagnóstico
-                        </Button>
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => handleSyncNow(marketplace.id)}>
-                        <RefreshCw size={14} />
-                        Sincronizar
-                      </Button>
-                      <Button size="sm" variant="outline" className="flex-1">
-                        <Settings size={14} />
-                        Configurar
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleDisconnect(marketplace.id)}>
-                        Desconectar
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Conecte sua conta do {marketplace.name} para sincronizar produtos, pedidos e estoque automaticamente.
-                  </p>
-                  {marketplace.id === "mercadolivre" ? (
+                    {/* Botões de ação */}
                     <div className="space-y-2">
-                      <Button className="w-full" onClick={() => handleConnect(marketplace.id)} disabled={isConnectingMercadoLivre}>
-                        <Link2 size={16} />
-                        {isConnectingMercadoLivre ? "Conectando..." : "Conectar com Mercado Livre"}
-                      </Button>
-                      {!mercadoLivreConfigured && (
-                        <p className="text-xs text-destructive">
-                          Configure VITE_ML_CLIENT_ID e VITE_ML_CLIENT_SECRET no .env.local.
-                        </p>
-                      )}
-                      {mercadoLivreError && (
-                        <p className="text-xs text-destructive">{mercadoLivreError}</p>
-                      )}
-                    </div>
-                  ) : (
-                    <Dialog open={configOpen === marketplace.id} onOpenChange={(open) => setConfigOpen(open ? marketplace.id : null)}>
-                      <DialogTrigger asChild>
-                        <Button className="w-full">
-                          <Link2 size={16} />
-                          Conectar {marketplace.name}
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="bg-card border-border">
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center gap-3">
-                            <img src={marketplace.logo} alt={marketplace.name} className="h-8 w-8 object-contain rounded bg-white p-0.5" />
-                            Conectar ao {marketplace.name}
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 pt-2">
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium text-foreground">API Key / App ID</label>
-                            <Input placeholder="Cole sua API Key aqui" value={formData.apiKey} onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })} />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium text-foreground">Secret Key</label>
-                            <Input type="password" placeholder="Cole sua Secret Key aqui" value={formData.secretKey} onChange={(e) => setFormData({ ...formData, secretKey: e.target.value })} />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium text-foreground">Shop ID / Seller ID</label>
-                            <Input placeholder="ID da sua loja" value={formData.shopId} onChange={(e) => setFormData({ ...formData, shopId: e.target.value })} />
-                          </div>
-                          <div className="bg-secondary/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-                            <p className="font-medium text-foreground">Como obter suas credenciais:</p>
-                            <ol className="list-decimal list-inside space-y-0.5">
-                              <li>Acesse o Shopee Partner Center</li>
-                              <li>Vá em App Management → Create App</li>
-                              <li>Copie o Partner ID e Key gerados</li>
-                            </ol>
-                          </div>
-                          <Button className="w-full" onClick={() => handleConnect(marketplace.id)} disabled={!formData.apiKey || !formData.secretKey}>
-                            <CheckCircle2 size={16} />
-                            Conectar
+                      {meta.id === "mercadolivre" && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            onClick={() => navigate("/integracoes/adicionar-produto")}
+                          >
+                            <Plus size={14} />
+                            Adicionar Produto
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => navigate("/integracoes/diagnostico")}
+                          >
+                            <Activity size={14} />
+                            Diagnóstico
                           </Button>
                         </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                      )}
+
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          disabled={isSyncing}
+                          onClick={() => handleSyncNow(integration)}
+                        >
+                          {isSyncing ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <RefreshCw size={14} />
+                          )}
+                          {isSyncing ? "Sincronizando…" : "Sincronizar"}
+                        </Button>
+                        <Button size="sm" variant="outline" className="flex-1">
+                          <Settings size={14} />
+                          Configurar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={disconnect.isPending}
+                          onClick={() => handleDisconnect(integration)}
+                        >
+                          Desconectar
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">{meta.description}</p>
+
+                    <Button
+                      className="w-full"
+                      disabled={isConnecting || isCallbackLoading}
+                      onClick={() => handleConnect(meta.id)}
+                    >
+                      {isConnecting ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Link2 size={16} />
+                      )}
+                      {isConnecting
+                        ? "Abrindo autenticação…"
+                        : `Conectar com ${meta.name}`}
+                    </Button>
+
+                    <div className="bg-secondary/40 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+                      <p className="font-medium text-foreground">Pré-requisitos:</p>
+                      {meta.id === "mercadolivre" ? (
+                        <ol className="list-decimal list-inside space-y-0.5">
+                          <li>Preencha <code className="text-primary">MELI_APP_ID</code> e <code className="text-primary">MELI_CLIENT_SECRET</code> no <code>.env</code></li>
+                          <li>Registre <code className="text-primary">MELI_REDIRECT_URI</code> no portal do desenvolvedor ML</li>
+                          <li>Clique em "Conectar" acima</li>
+                        </ol>
+                      ) : (
+                        <ol className="list-decimal list-inside space-y-0.5">
+                          <li>Preencha <code className="text-primary">SHOPEE_PARTNER_ID</code> e <code className="text-primary">SHOPEE_PARTNER_KEY</code> no <code>.env</code></li>
+                          <li>Registre <code className="text-primary">SHOPEE_REDIRECT_URI</code> no Shopee Partner Center</li>
+                          <li>Clique em "Conectar" acima</li>
+                        </ol>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
+
+      {/* Lista completa de integrações */}
+      {integrations.length > 0 && (
+        <Card className="gradient-card border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ArrowUpDown size={16} className="text-primary" />
+              Todas as integrações
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {integrations.map((int) => (
+                <div
+                  key={int.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/30"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={
+                        int.marketplace === "mercadolivre"
+                          ? mercadoLivreLogo
+                          : shopeeLogo
+                      }
+                      alt={marketplaceLabel(int.marketplace)}
+                      className="h-6 w-6 object-contain rounded bg-white p-0.5"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {int.shopName || `ID: ${int.shopId}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {marketplaceLabel(int.marketplace)} · Loja {int.shopId}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={int.isActive ? "default" : "secondary"}
+                      className={
+                        int.isActive
+                          ? "bg-green-500/20 text-green-400 border-green-500/30 text-xs"
+                          : "text-xs"
+                      }
+                    >
+                      {int.isActive ? "Ativo" : "Inativo"}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2"
+                      disabled={triggerSync.isPending}
+                      onClick={() => triggerSync.mutate(int.id)}
+                    >
+                      <RefreshCw size={12} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, Package, Truck, Link2, Menu, X, 
-  ChevronRight, Settings, Plus
+import {
+  LayoutDashboard, Package, Truck, Link2, Menu, X,
+  ChevronRight, Settings, ShoppingCart, DollarSign,
 } from "lucide-react";
 import fortLogo from "@/assets/fort-logo.png";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Package, label: "Produtos", path: "/produtos" },
-  { icon: Truck, label: "Entregas", path: "/entregas" },
-  { icon: Link2, label: "Integrações", path: "/integracoes" },
-  { icon: Plus, label: "Adicionar Produto", path: "/integracoes/adicionar-produto" },
+  { icon: LayoutDashboard, label: "Dashboard",   path: "/"           },
+  { icon: Package,         label: "Produtos",    path: "/produtos"   },
+  { icon: ShoppingCart,    label: "Pedidos",     path: "/pedidos"    },
+  { icon: Truck,           label: "Entregas",    path: "/entregas"   },
+  { icon: DollarSign,      label: "Financeiro",  path: "/financeiro" },
+  { icon: Link2,           label: "Integrações", path: "/integracoes"},
 ];
 
 const Sidebar = () => {

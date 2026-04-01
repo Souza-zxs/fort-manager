@@ -57,14 +57,12 @@ export class IntegrationController {
 
       const integration = await this.authService.handleCallback(marketplace, code, shop_id ?? '', userId);
 
+      // Retorna DTO flat — compatível com CallbackResultDto no frontend
       (res as AuthenticatedResponse).status(201).json({
-        message: `${marketplace} store connected successfully`,
-        integration: {
-          id: integration.id,
-          marketplace: integration.marketplace,
-          shopName: integration.shopName,
-          shopId: integration.shopId,
-        },
+        id:          integration.id,
+        marketplace: integration.marketplace,
+        shopName:    integration.shopName,
+        shopId:      integration.shopId,
       });
     } catch (error) {
       next(error);
