@@ -9,11 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  getStoredMercadoLivreAccount, 
   fetchMercadoLivreAddresses,
   createMercadoLivreItem,
-  addMercadoLivreDescription
+  type MeliAddress,
 } from "@/lib/mercadoLivre";
+import { useIntegrations } from "@/hooks/useMarketplaces";
 
 interface ProductForm {
   title: string;
@@ -33,7 +33,7 @@ const AdicionarProdutoML = () => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
-  const [addresses, setAddresses] = useState<any[]>([]);
+  const [addresses, setAddresses] = useState<MeliAddress[]>([]);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
 
   const [formData, setFormData] = useState<ProductForm>({
@@ -50,12 +50,13 @@ const AdicionarProdutoML = () => {
   });
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
 
-  const mlAccount = getStoredMercadoLivreAccount();
+  const { data: integrations = [] } = useIntegrations();
+  const mlIntegration = integrations.find((i) => i.marketplace === "mercadolivre" && i.isActive);
 
   // Buscar endereços ao carregar
   useEffect(() => {
     const fetchAddresses = async () => {
-      if (!mlAccount) return;
+      if (!mlIntegration) return;
 
       try {
         const data = await fetchMercadoLivreAddresses();
@@ -72,9 +73,9 @@ const AdicionarProdutoML = () => {
     };
 
     fetchAddresses();
-  }, [mlAccount]);
+  }, [mlIntegration]);
 
-  if (!mlAccount) {
+  if (!mlIntegration) {
     return (
       <div className="space-y-6">
         <Button variant="ghost" onClick={() => navigate("/integracoes")}>
@@ -152,7 +153,7 @@ const AdicionarProdutoML = () => {
       }
 
       // Payload principal (sem descrição)
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         title: formData.title,
         category_id: formData.category_id,
         price: parseFloat(formData.price),
@@ -161,6 +162,9 @@ const AdicionarProdutoML = () => {
         buying_mode: formData.buying_mode,
         listing_type_id: formData.listing_type_id,
         condition: formData.condition,
+        description: formData.description.trim()
+          ? { plain_text: formData.description.trim() }
+          : undefined,
         pictures: formData.pictures.map((url) => ({ source: url })),
         seller_address: {
           id: parseInt(selectedAddressId)
@@ -179,15 +183,6 @@ const AdicionarProdutoML = () => {
 
       // Criar o item
       const data = await createMercadoLivreItem(payload);
-
-      // Se houver descrição, adicionar separadamente
-      if (formData.description.trim()) {
-        try {
-          await addMercadoLivreDescription(data.id, formData.description);
-        } catch (descError) {
-          console.warn("Erro ao adicionar descrição:", descError);
-        }
-      }
 
       toast({
         title: "Produto criado com sucesso!",
@@ -225,7 +220,7 @@ const AdicionarProdutoML = () => {
           </Button>
           <h1 className="text-2xl font-display font-bold text-foreground">Adicionar Produto no Mercado Livre</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Conta conectada: {mlAccount.nickname || mlAccount.userId}
+            Conta conectada: {mlIntegration.shopName || mlIntegration.shopId}
           </p>
         </div>
       </div>
@@ -475,7 +470,7 @@ const AdicionarProdutoML = () => {
 
             {/* Botões de Ação */}
             <div className="space-y-3">
-              <Button type="submit" className="w-full" disabled={isSubmitting || addresses.length === 0}>
+              <Button type="submit" className="w-full" disabled={isSubmitting || !selectedAddressId}>
                 {isSubmitting ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
@@ -488,7 +483,7 @@ const AdicionarProdutoML = () => {
                   </>
                 )}
               </Button>
-              {addresses.length === 0 && (
+              {!selectedAddressId && (
                 <p className="text-xs text-center text-destructive">
                   Cadastre um endereço para publicar
                 </p>

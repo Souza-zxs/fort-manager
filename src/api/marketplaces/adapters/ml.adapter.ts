@@ -121,6 +121,11 @@ export class MercadoLivreAdapter {
     return data;
   }
 
+  async getUserAddresses(userId: number): Promise<unknown[]> {
+    const { data } = await this.client.get<unknown[]>(`/users/${userId}/addresses`);
+    return data;
+  }
+
   // ── Items / Anúncios ──────────────────────────────────────────────────────
 
   /**

@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import mercadoLivreRoutes from './routes/mercadolivre.js';
 import { createMarketplaceRouter } from '../src/api/marketplaces/routes.js';
 import meliRoutes from '../src/api/marketplaces/mercadolivre-routes.js';
 
@@ -12,8 +11,8 @@ const app  = express();
 const PORT = process.env.PORT || 3001;
 
 const allowedOrigins = [
-  process.env.VITE_ML_REDIRECT_URI?.replace(/\/integracoes$/, ''),
-  process.env.MELI_REDIRECT_URI?.replace(/\/integracoes$/, ''),
+  process.env.VITE_ML_REDIRECT_URI?.replace(/\/auth\/callback$/, ''),
+  process.env.MELI_REDIRECT_URI?.replace(/\/auth\/callback$/, ''),
   'http://localhost:5173',
   'http://localhost:5174',
 ].filter(Boolean) as string[];
@@ -39,9 +38,6 @@ app.use('/api/marketplaces', createMarketplaceRouter());
 // Rotas ML específicas (anúncios, financeiro) com meliAuthMiddleware
 app.use('/api/marketplaces/mercadolivre', meliRoutes);
 
-// Rotas ML legadas (proxy simples, sem auth Supabase) — mantidas para compatibilidade
-app.use('/api/mercadolivre', mercadoLivreRoutes);
-
 // Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -50,5 +46,5 @@ app.get('/api/health', (_req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Backend rodando em http://localhost:${PORT}`);
   console.log(`📦 Marketplaces API: http://localhost:${PORT}/api/marketplaces`);
-  console.log(`🛒 Mercado Livre (legado): http://localhost:${PORT}/api/mercadolivre`);
+  console.log(`🛒 Mercado Livre API: http://localhost:${PORT}/api/marketplaces/mercadolivre`);
 });

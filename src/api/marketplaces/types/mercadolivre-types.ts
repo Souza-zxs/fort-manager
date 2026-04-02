@@ -172,3 +172,28 @@ export interface MeliTokenResponse {
     unavailable: number;
     currency_id: string;
   }
+  
+  export interface MeliShop {
+    id: number;
+    name: string;
+    permalink: string;
+    seller_reputation:{
+      level_id: string;
+      power_seller_status: string;
+      transactions: {
+        total: number;
+        completed: number;
+        canceled: number;
+      };
+    };
+    buyer_reputation: {
+      level_id: string;
+      power_seller_status: string;
+      transactions: {
+        total: number;
+        completed: number;
+        canceled: number;
+    }
+  }
+  }
+    

@@ -4,15 +4,14 @@ import { ArrowLeft, CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw } from
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { getStoredMercadoLivreAccount } from "@/lib/mercadoLivre";
-
-const API_BASE = import.meta.env.VITE_API_URL?.trim() || "http://localhost:3001";
+import { fetchCurrentUser, fetchMercadoLivreAddresses, fetchMercadoLivreItems } from "@/lib/mercadoLivre";
+import { useIntegrations } from "@/hooks/useMarketplaces";
 
 interface DiagnosticResult {
   check: string;
   status: "success" | "error" | "warning";
   message: string;
-  details?: any;
+  details?: unknown;
 }
 
 const DiagnosticoML = () => {
@@ -20,10 +19,11 @@ const DiagnosticoML = () => {
   const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(false);
   const [results, setResults] = useState<DiagnosticResult[]>([]);
-  const mlAccount = getStoredMercadoLivreAccount();
+  const { data: integrations = [] } = useIntegrations();
+  const mlIntegration = integrations.find((i) => i.marketplace === "mercadolivre" && i.isActive);
 
   const runDiagnostic = async () => {
-    if (!mlAccount) {
+    if (!mlIntegration) {
       toast({
         title: "Mercado Livre não conectado",
         description: "Conecte sua conta primeiro",
@@ -37,48 +37,22 @@ const DiagnosticoML = () => {
     const diagnosticResults: DiagnosticResult[] = [];
 
     try {
-      const accessToken = localStorage.getItem("ml_access_token");
-
-      // 1. Verificar token
       diagnosticResults.push({
-        check: "Token de Acesso",
-        status: accessToken ? "success" : "error",
-        message: accessToken ? "Token encontrado" : "Token não encontrado",
+        check: "Integração Mercado Livre",
+        status: "success",
+        message: `Integração ativa para loja ${mlIntegration.shopName || mlIntegration.shopId}`,
       });
 
-      if (!accessToken) {
-        setResults(diagnosticResults);
-        setIsChecking(false);
-        return;
-      }
-
-      // 2. Buscar dados do usuário
+      // 1. Buscar dados do usuário (via arquitetura marketplaces)
       try {
-        const userResponse = await fetch(`${API_BASE}/api/mercadolivre/user/${mlAccount.userId}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
+        const userData = await fetchCurrentUser();
+        diagnosticResults.push({
+          check: "Dados do Usuário",
+          status: "success",
+          message: `Usuário: ${userData.nickname || userData.id}`,
+          details: userData,
         });
-
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          diagnosticResults.push({
-            check: "Dados do Usuário",
-            status: "success",
-            message: `Usuário: ${userData.nickname || userData.id}`,
-            details: {
-              id: userData.id,
-              nickname: userData.nickname,
-              email: userData.email,
-              status: userData.status?.site_status,
-            },
-          });
-        } else {
-          diagnosticResults.push({
-            check: "Dados do Usuário",
-            status: "error",
-            message: "Erro ao buscar dados do usuário",
-          });
-        }
-      } catch (error) {
+      } catch {
         diagnosticResults.push({
           check: "Dados do Usuário",
           status: "error",
@@ -86,38 +60,25 @@ const DiagnosticoML = () => {
         });
       }
 
-      // 3. Verificar endereços
+      // 2. Verificar endereços
       try {
-        const addressResponse = await fetch(`${API_BASE}/api/mercadolivre/user/${mlAccount.userId}/addresses`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-
-        if (addressResponse.ok) {
-          const addresses = await addressResponse.json();
-          
-          if (Array.isArray(addresses) && addresses.length > 0) {
-            diagnosticResults.push({
-              check: "Endereços Cadastrados",
-              status: "success",
-              message: `${addresses.length} endereço(s) encontrado(s)`,
-              details: addresses,
-            });
-          } else {
-            diagnosticResults.push({
-              check: "Endereços Cadastrados",
-              status: "error",
-              message: "Nenhum endereço cadastrado",
-              details: "Cadastre um endereço em: https://www.mercadolivre.com.br/vendas/configuracao/dados",
-            });
-          }
+        const addresses = await fetchMercadoLivreAddresses();
+        if (Array.isArray(addresses) && addresses.length > 0) {
+          diagnosticResults.push({
+            check: "Endereços Cadastrados",
+            status: "success",
+            message: `${addresses.length} endereço(s) encontrado(s)`,
+            details: addresses,
+          });
         } else {
           diagnosticResults.push({
             check: "Endereços Cadastrados",
-            status: "warning",
-            message: "Não foi possível verificar endereços",
+            status: "error",
+            message: "Nenhum endereço cadastrado",
+            details: "Cadastre um endereço em: https://www.mercadolivre.com.br/vendas/configuracao/dados",
           });
         }
-      } catch (error) {
+      } catch {
         diagnosticResults.push({
           check: "Endereços Cadastrados",
           status: "warning",
@@ -125,7 +86,23 @@ const DiagnosticoML = () => {
         });
       }
 
-      // 4. Testar criação de item (dry run)
+      // 3. Verificar leitura de anúncios
+      try {
+        const items = await fetchMercadoLivreItems();
+        diagnosticResults.push({
+          check: "Leitura de Anúncios",
+          status: "success",
+          message: `${items.length} anúncio(s) acessível(eis) via API`,
+        });
+      } catch {
+        diagnosticResults.push({
+          check: "Leitura de Anúncios",
+          status: "warning",
+          message: "Não foi possível listar anúncios no momento",
+        });
+      }
+
+      // 4. Publicação
       diagnosticResults.push({
         check: "Permissão para Publicar",
         status: "warning",
@@ -157,7 +134,7 @@ const DiagnosticoML = () => {
     }
   };
 
-  if (!mlAccount) {
+  if (!mlIntegration) {
     return (
       <div className="space-y-6">
         <Button variant="ghost" onClick={() => navigate("/integracoes")}>
@@ -212,8 +189,7 @@ const DiagnosticoML = () => {
         <CardHeader>
           <CardTitle>Conta Conectada</CardTitle>
           <CardDescription>
-            User ID: {mlAccount.userId}
-            {mlAccount.nickname && ` - ${mlAccount.nickname}`}
+            Loja: {mlIntegration.shopName || mlIntegration.shopId} ({mlIntegration.shopId})
           </CardDescription>
         </CardHeader>
       </Card>

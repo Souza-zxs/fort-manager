@@ -1,4 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
+import { getSupabaseClient } from '../../infra/database/supabase';
+import { IntegrationRepository } from '../../repositories/integration.repository';
+import { AuthenticatedRequest } from './auth.middleware';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Middleware: carrega as credenciais do Mercado Livre e as injeta em
@@ -14,35 +17,35 @@ export async function meliAuthMiddleware(
   next: NextFunction,
 ) {
   try {
-    // ── Carregue as credenciais da sua fonte de dados ──────────────────────
-    // Exemplo usando variáveis de ambiente (conta própria / single-tenant):
+    const userId = (req as AuthenticatedRequest).userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Usuário não autenticado.' });
+    }
+
+    const db = getSupabaseClient();
+    const integrationRepo = new IntegrationRepository(db);
+    const integrations = await integrationRepo.findByUserId(userId);
+    const integration = integrations.find((i) => i.marketplace === 'mercadolivre' && i.isActive);
+
+    if (!integration) {
+      return res.status(401).json({ error: 'Mercado Livre não conectado para este usuário.' });
+    }
+
     const credentials = {
-      app_id:        process.env.MELI_APP_ID!,
+      app_id: process.env.MELI_APP_ID!,
       client_secret: process.env.MELI_CLIENT_SECRET!,
-      redirect_uri:  process.env.MELI_REDIRECT_URI!,
-      access_token:  process.env.MELI_ACCESS_TOKEN!,
-      refresh_token: process.env.MELI_REFRESH_TOKEN!,
-      user_id:       Number(process.env.MELI_USER_ID),
-      expires_at:    new Date(process.env.MELI_EXPIRES_AT ?? 0),
+      redirect_uri: process.env.MELI_REDIRECT_URI!,
+      access_token: integration.accessToken,
+      refresh_token: integration.refreshToken,
+      user_id: Number(integration.shopId),
+      expires_at: integration.accessTokenExpiresAt,
     };
 
-    // Exemplo multi-tenant (busca no banco pelo userId da sessão):
-    // const userId = req.user?.id;
-    // const integration = await db.integrations.findOne({
-    //   where: { user_id: userId, marketplace: 'mercadolivre' },
-    // });
-    // if (!integration) return res.status(401).json({ error: 'Mercado Livre não conectado.' });
-    // const credentials = {
-    //   app_id:        process.env.MELI_APP_ID!,
-    //   client_secret: process.env.MELI_CLIENT_SECRET!,
-    //   redirect_uri:  process.env.MELI_REDIRECT_URI!,
-    //   access_token:  integration.access_token,
-    //   refresh_token: integration.refresh_token,
-    //   user_id:       integration.meli_user_id,
-    //   expires_at:    integration.token_expires_at,
-    // };
+    if (!credentials.app_id || !credentials.client_secret || !credentials.redirect_uri) {
+      return res.status(500).json({ error: 'Credenciais de app Mercado Livre não configuradas no servidor.' });
+    }
 
-    if (!credentials.access_token) {
+    if (!credentials.access_token || !credentials.refresh_token || !credentials.user_id) {
       return res.status(401).json({ error: 'Mercado Livre não autenticado.' });
     }
 

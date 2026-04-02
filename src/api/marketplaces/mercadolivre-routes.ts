@@ -2,6 +2,8 @@ import { Router } from 'express';
 import {
   getAuthUrl,
   handleCallback,
+  getMe,
+  getAddresses,
   listItems,
   getItem,
   createItem,
@@ -16,6 +18,7 @@ import {
   getPayment,
 } from '../marketplaces/controllers/mercadolivre.controller';
 import { meliAuthMiddleware } from '../marketplaces/shared/middleware/mercadolivre.auth.middleware';
+import { authMiddleware } from '../marketplaces/shared/middleware/auth.middleware';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Para usar: importe este router no seu routes.ts existente:
@@ -31,7 +34,12 @@ router.get('/auth/url',      getAuthUrl);
 router.get('/auth/callback', handleCallback);
 
 // Todas as rotas abaixo exigem credenciais válidas
+router.use(authMiddleware);
 router.use(meliAuthMiddleware);
+
+// Conta
+router.get('/me', getMe);
+router.get('/me/addresses', getAddresses);
 
 // Anúncios
 router.get  ('/items',                  listItems);

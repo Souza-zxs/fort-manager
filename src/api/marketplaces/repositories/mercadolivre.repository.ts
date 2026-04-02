@@ -99,6 +99,14 @@ export class MercadoLivreRepository {
     return this.adapter.getOrder(orderId);
   }
 
+  async getMe() {
+    return this.adapter.getMe();
+  }
+
+  async getAddresses(): Promise<unknown[]> {
+    return this.adapter.getUserAddresses(this.userId);
+  }
+
   // ── Financeiro ────────────────────────────────────────────────────────────
 
   async getPayment(paymentId: string): Promise<MeliPayment> {

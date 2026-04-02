@@ -87,6 +87,26 @@ export async function handleCallback(req: Request, res: Response): Promise<void>
   }
 }
 
+export async function getMe(_req: Request, res: Response): Promise<void> {
+  try {
+    const repo = buildRepo(res.locals.meliCredentials);
+    const me = await repo.getMe();
+    res.json(me);
+  } catch (err: unknown) {
+    res.status(500).json({ error: errorMessage(err) });
+  }
+}
+
+export async function getAddresses(_req: Request, res: Response): Promise<void> {
+  try {
+    const repo = buildRepo(res.locals.meliCredentials);
+    const addresses = await repo.getAddresses();
+    res.json(addresses);
+  } catch (err: unknown) {
+    res.status(500).json({ error: errorMessage(err) });
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Anúncios
 // ─────────────────────────────────────────────────────────────────────────────
