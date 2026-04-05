@@ -37,8 +37,14 @@ export function useStartOAuth() {
   return useMutation({
     mutationFn: async (marketplace: string) => {
       const { url, state } = await marketplaceApi.getAuthUrl(marketplace);
+      if (!url?.startsWith('http://') && !url?.startsWith('https://')) {
+        throw new Error('URL de autorização inválida. Verifique o backend e as variáveis MELI_* no servidor.');
+      }
+      if (!state) {
+        throw new Error('Resposta OAuth incompleta (state ausente). Tente novamente.');
+      }
       storeOAuthState(state, marketplace);
-      window.location.href = url;
+      window.location.assign(url);
     },
     onError: (err: Error) => {
       toast({

@@ -35,6 +35,36 @@ function ensureJsonArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+/**
+ * Resposta de auth-url deve ser JSON { url, state }. HTML (404 SPA) ou {} quebra o OAuth
+ * e `window.location.href = undefined` vira navegação para /undefined.
+ */
+function parseAuthUrlDto(raw: unknown): AuthUrlDto {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new ApiError(
+      'Resposta inválida ao pedir URL de autorização. Confirme se o backend Express está no ar em /api/marketplaces (deploy da API, não só o front estático).',
+      502,
+    );
+  }
+  const o = raw as Record<string, unknown>;
+  const url = o.url;
+  const state = o.state;
+  const isHttpUrl =
+    typeof url === 'string' &&
+    url.length > 0 &&
+    (url.startsWith('https://') || url.startsWith('http://'));
+  if (!isHttpUrl) {
+    throw new ApiError(
+      'URL de autorização ausente ou inválida. No servidor, configure MELI_APP_ID, MELI_CLIENT_SECRET e MELI_REDIRECT_URI (ou equivalentes VITE_ML_*).',
+      502,
+    );
+  }
+  if (typeof state !== 'string' || state.length === 0) {
+    throw new ApiError('Resposta do servidor sem state OAuth. Tente conectar novamente.', 502);
+  }
+  return { url, state };
+}
+
 async function request<T>(
   path: string,
   config: AxiosRequestConfig = {},
@@ -133,7 +163,8 @@ export interface OrderDto {
 export const marketplaceApi = {
   /** Obtém a URL de autorização OAuth do ML/Shopee. Não exige login. */
   getAuthUrl(marketplace: string): Promise<AuthUrlDto> {
-    return request<AuthUrlDto>(`/integrations/${marketplace}/auth-url`, {}, false);
+    const m = encodeURIComponent(marketplace);
+    return request<unknown>(`/integrations/${m}/auth-url`, {}, false).then(parseAuthUrlDto);
   },
 
   /**
@@ -143,8 +174,9 @@ export const marketplaceApi = {
   handleCallback(marketplace: string, code: string, shopId?: string): Promise<CallbackResultDto> {
     const params = new URLSearchParams({ code });
     if (shopId) params.set('shop_id', shopId);
+    const m = encodeURIComponent(marketplace);
     return request<CallbackResultDto>(
-      `/integrations/${marketplace}/callback?${params.toString()}`,
+      `/integrations/${m}/callback?${params.toString()}`,
     );
   },
 
