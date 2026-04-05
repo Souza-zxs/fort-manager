@@ -60,7 +60,8 @@ const Integracoes = () => {
 
   // ── Queries / Mutations ───────────────────────────────────────────────────
 
-  const { data: integrations = [], isLoading, error } = useIntegrations();
+  const { data: integrationsRaw, isLoading, error } = useIntegrations();
+  const integrations = Array.isArray(integrationsRaw) ? integrationsRaw : [];
   const startOAuth  = useStartOAuth();
   const disconnect  = useDisconnect();
   const triggerSync = useTriggerSync();

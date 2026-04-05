@@ -19,7 +19,8 @@ const DiagnosticoML = () => {
   const { toast } = useToast();
   const [isChecking, setIsChecking] = useState(false);
   const [results, setResults] = useState<DiagnosticResult[]>([]);
-  const { data: integrations = [] } = useIntegrations();
+  const { data: integrationsRaw } = useIntegrations();
+  const integrations = Array.isArray(integrationsRaw) ? integrationsRaw : [];
   const mlIntegration = integrations.find((i) => i.marketplace === "mercadolivre" && i.isActive);
 
   const runDiagnostic = async () => {

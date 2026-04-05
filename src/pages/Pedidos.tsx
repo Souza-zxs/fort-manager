@@ -137,11 +137,13 @@ export default function Pedidos() {
       staleTime: 60_000,
     });
 
-  const filtered = orders.filter((o) => {
+  const orderList = Array.isArray(orders) ? orders : [];
+
+  const filtered = orderList.filter((o) => {
     const matchSearch =
       !search ||
       o.externalOrderId.includes(search) ||
-      o.buyerUsername.toLowerCase().includes(search.toLowerCase()) ||
+      (o.buyerUsername ?? "").toLowerCase().includes(search.toLowerCase()) ||
       (o.trackingNumber ?? "").includes(search);
 
     const matchStatus = statusFilter === "all" || o.status === statusFilter;
@@ -151,10 +153,10 @@ export default function Pedidos() {
   });
 
   const totals = {
-    all:       orders.length,
-    completed: orders.filter((o) => o.status === "COMPLETED" || o.status === "PAID").length,
-    pending:   orders.filter((o) => o.status === "UNPAID").length,
-    cancelled: orders.filter((o) => o.status === "CANCELLED").length,
+    all:       orderList.length,
+    completed: orderList.filter((o) => o.status === "COMPLETED" || o.status === "PAID").length,
+    pending:   orderList.filter((o) => o.status === "UNPAID").length,
+    cancelled: orderList.filter((o) => o.status === "CANCELLED").length,
   };
 
   return (

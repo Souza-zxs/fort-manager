@@ -30,6 +30,11 @@ async function getToken(): Promise<string> {
   return session.access_token;
 }
 
+/** Evita crash quando o servidor devolve HTML, objeto ou null em vez de JSON array. */
+function ensureJsonArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
 async function request<T>(
   path: string,
   config: AxiosRequestConfig = {},
@@ -120,6 +125,7 @@ export interface OrderDto {
   orderUpdatedAt: string;
   syncedAt: string;
   createdAt: string;
+  marketplace: string;
 }
 
 // ── API pública ────────────────────────────────────────────────────────────────
@@ -144,7 +150,7 @@ export const marketplaceApi = {
 
   /** Lista todas as integrações ativas do usuário logado. */
   listIntegrations(): Promise<IntegrationDto[]> {
-    return request<IntegrationDto[]>('/integrations');
+    return request<unknown>('/integrations').then(ensureJsonArray<IntegrationDto>);
   },
 
   /** Desconecta (desativa) uma integração. */
@@ -154,13 +160,27 @@ export const marketplaceApi = {
 
   /** Dispara sincronização de pedidos e pagamentos para uma integração. */
   triggerSync(id: string): Promise<SyncResultDto> {
-    return request<SyncResultDto>(`/integrations/${id}/sync`, { method: 'POST' });
+    return request<SyncResultDto>(`/integrations/${id}/sync`, { method: 'POST' }).then((raw) => {
+      if (!raw || typeof raw !== 'object') {
+        return {
+          integrationId: '',
+          marketplace: 'mercadolivre',
+          shopId: '',
+          ordersSynced: 0,
+          paymentsSynced: 0,
+          errors: [],
+          syncedAt: new Date().toISOString(),
+        };
+      }
+      const o = raw as SyncResultDto;
+      return { ...o, errors: Array.isArray(o.errors) ? o.errors : [] };
+    });
   },
 
   /** Lista pedidos (todos ou filtrados por integração). */
   getOrders(integrationId?: string): Promise<OrderDto[]> {
     const path = integrationId ? `/orders/${integrationId}` : '/orders';
-    return request<OrderDto[]>(path);
+    return request<unknown>(path).then(ensureJsonArray<OrderDto>);
   },
 
   /** Resumo financeiro do período. */

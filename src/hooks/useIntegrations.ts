@@ -46,11 +46,13 @@ export function useIntegrations() {
   });
 
   const getConnection = useCallback((provider: string) => {
-    return data?.connections?.find(c => c.provider === provider) || null;
+    const list = Array.isArray(data?.connections) ? data.connections : [];
+    return list.find((c) => c.provider === provider) || null;
   }, [data]);
 
   const getLogsForConnection = useCallback((connectionId: string) => {
-    return data?.logs?.filter(l => l.connection_id === connectionId) || [];
+    const logs = Array.isArray(data?.logs) ? data.logs : [];
+    return logs.filter((l) => l.connection_id === connectionId);
   }, [data]);
 
   const startAuth = useMutation({
@@ -135,8 +137,8 @@ export function useIntegrations() {
   });
 
   return {
-    connections: data?.connections || [],
-    logs: data?.logs || [],
+    connections: Array.isArray(data?.connections) ? data.connections : [],
+    logs: Array.isArray(data?.logs) ? data.logs : [],
     isLoading,
     error,
     getConnection,

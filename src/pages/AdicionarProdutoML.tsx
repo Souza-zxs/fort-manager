@@ -50,7 +50,8 @@ const AdicionarProdutoML = () => {
   });
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
 
-  const { data: integrations = [] } = useIntegrations();
+  const { data: integrationsRaw } = useIntegrations();
+  const integrations = Array.isArray(integrationsRaw) ? integrationsRaw : [];
   const mlIntegration = integrations.find((i) => i.marketplace === "mercadolivre" && i.isActive);
 
   // Buscar endereços ao carregar
