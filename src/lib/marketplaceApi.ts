@@ -1,15 +1,9 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
+import { resolveApiOrigin } from './apiOrigin';
 import { supabase } from './supabase';
 
-// ── Base URL ──────────────────────────────────────────────────────────────────
-
-const API_BASE = (
-  import.meta.env.VITE_API_URL?.trim() ||
-  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001')
-).replace(/\/$/, '');
-
 const http = axios.create({
-  baseURL: `${API_BASE}/api/marketplaces`,
+  baseURL: `${resolveApiOrigin()}/api/marketplaces`,
   timeout: 15_000,
   headers: { 'Content-Type': 'application/json' },
 });

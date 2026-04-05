@@ -9,6 +9,7 @@ import {
 } from '../types/marketplace.types';
 import { TokenExpiredError } from '../shared/errors/errors';
 import { secondsFromNow, isTokenNearExpiry, generateState } from '../shared/utils/index';
+import { resolveApiOrigin } from '@/lib/apiOrigin';
 
 export class MarketplaceAuthService {
   constructor(private readonly integrationRepository: IntegrationRepository) {}

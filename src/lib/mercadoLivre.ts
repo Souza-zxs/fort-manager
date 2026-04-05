@@ -1,14 +1,10 @@
 import axios, { AxiosError, type AxiosRequestConfig } from "axios";
+import { resolveApiOrigin } from "@/lib/apiOrigin";
 import { supabase } from "@/lib/supabase";
 import type { MeliItem, MeliUser } from "@/api/marketplaces/types/mercadolivre-types";
 
-const API_BASE = (
-  import.meta.env.VITE_API_URL?.trim() ||
-  (typeof window !== "undefined" ? window.location.origin : "https://fort-manager.vercel.app/integracoes")
-).replace(/\/$/, "");
-
 const mlHttp = axios.create({
-  baseURL: `${API_BASE}/api/marketplaces/mercadolivre`,
+  baseURL: `${resolveApiOrigin()}/api/marketplaces/mercadolivre`,
   timeout: 20_000,
 });
 
