@@ -32,9 +32,12 @@ export async function meliAuthMiddleware(
     }
 
     const credentials = {
-      app_id: process.env.MELI_APP_ID!,
-      client_secret: process.env.MELI_CLIENT_SECRET!,
-      redirect_uri: process.env.MELI_REDIRECT_URI!,
+      app_id:
+        process.env.MELI_APP_ID ?? process.env.VITE_ML_CLIENT_ID ?? '',
+      client_secret:
+        process.env.MELI_CLIENT_SECRET ?? process.env.VITE_ML_CLIENT_SECRET ?? '',
+      redirect_uri:
+        process.env.MELI_REDIRECT_URI ?? process.env.VITE_ML_REDIRECT_URI ?? '',
       access_token: integration.accessToken,
       refresh_token: integration.refreshToken,
       user_id: Number(integration.shopId),

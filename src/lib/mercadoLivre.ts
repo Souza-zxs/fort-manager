@@ -4,7 +4,7 @@ import type { MeliItem, MeliUser } from "@/api/marketplaces/types/mercadolivre-t
 
 const API_BASE = (
   import.meta.env.VITE_API_URL?.trim() ||
-  (typeof window !== "undefined" ? window.location.origin : "http://localhost:3001")
+  (typeof window !== "undefined" ? window.location.origin : "https://fort-manager.vercel.app/integracoes")
 ).replace(/\/$/, "");
 
 const mlHttp = axios.create({

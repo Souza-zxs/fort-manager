@@ -42,12 +42,18 @@ export class MercadoLivreMarketplaceAdapter implements MarketplaceAdapter {
   private readonly redirectUri: string;
 
   constructor() {
-    this.appId        = process.env.MELI_APP_ID ?? '';
-    this.clientSecret = process.env.MELI_CLIENT_SECRET ?? '';
-    this.redirectUri  = process.env.MELI_REDIRECT_URI ?? '';
+    // Node carrega MELI_* no servidor; VITE_ML_* costuma existir no mesmo .env (fallback útil no dev)
+    this.appId =
+      process.env.MELI_APP_ID ?? process.env.VITE_ML_CLIENT_ID ?? '';
+    this.clientSecret =
+      process.env.MELI_CLIENT_SECRET ?? process.env.VITE_ML_CLIENT_SECRET ?? '';
+    this.redirectUri =
+      process.env.MELI_REDIRECT_URI ?? process.env.VITE_ML_REDIRECT_URI ?? '';
 
     if (!this.appId || !this.clientSecret || !this.redirectUri) {
-      throw new Error('Missing Mercado Livre environment variables: MELI_APP_ID, MELI_CLIENT_SECRET, MELI_REDIRECT_URI');
+      throw new Error(
+        'Missing Mercado Livre env: MELI_APP_ID (ou VITE_ML_CLIENT_ID), MELI_CLIENT_SECRET (ou VITE_ML_CLIENT_SECRET), MELI_REDIRECT_URI (ou VITE_ML_REDIRECT_URI)',
+      );
     }
   }
 
