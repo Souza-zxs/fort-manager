@@ -134,11 +134,9 @@ export default function Financeiro() {
           </Button>
         ))}
 
-        {data && (
-          <span className="text-xs text-muted-foreground ml-auto">
-            {formatDate(data.period.from)} – {formatDate(data.period.to)}
-          </span>
-        )}
+        <span className="text-xs text-muted-foreground ml-auto">
+          {formatDate(from.toISOString())} – {formatDate(to.toISOString())}
+        </span>
       </div>
 
       {/* Erro */}
