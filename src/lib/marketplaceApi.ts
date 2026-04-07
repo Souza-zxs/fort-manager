@@ -1,9 +1,8 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
-import { resolveApiOrigin } from './apiOrigin';
 import { supabase } from './supabase';
 
 const http = axios.create({
-  baseURL: `${resolveApiOrigin()}/api/marketplaces`,
+  baseURL: `/api/marketplaces`,
   timeout: 15_000,
   headers: { 'Content-Type': 'application/json' },
 });
