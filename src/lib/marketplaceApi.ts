@@ -31,7 +31,7 @@ async function getToken(): Promise<string> {
 }
 
 /** Evita crash quando o servidor devolve HTML, objeto ou null em vez de JSON array. */
-function ensureJsonArray<T>(value: unknown): T[] {
+function ensureJsonArray<T>(value: string): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
@@ -39,14 +39,14 @@ function ensureJsonArray<T>(value: unknown): T[] {
  * Resposta de auth-url deve ser JSON { url, state }. HTML (404 SPA) ou {} quebra o OAuth
  * e `window.location.href = undefined` vira navegação para /undefined.
  */
-function parseAuthUrlDto(raw: unknown): AuthUrlDto {
+function parseAuthUrlDto(raw: string): AuthUrlDto {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw new ApiError(
       'Resposta inválida ao pedir URL de autorização. Confirme se o backend Express está no ar em /api/marketplaces (deploy da API, não só o front estático).',
       502,
     );
   }
-  const o = raw as Record<string, unknown>;
+  const o = raw as Record<string, string>;
   const url = o.url;
   const state = o.state;
   const isHttpUrl =
@@ -82,14 +82,14 @@ async function request<T>(
       ...config,
       headers: {
         ...extraHeaders,
-        ...(config.headers as Record<string, string> | undefined),
+        ...(config.headers as Record<string, string>),
       },
     });
     return data;
   } catch (err) {
     if (err instanceof AxiosError) {
       const status = err.response?.status ?? 0;
-      const body = err.response?.data as { error?: string; message?: string } | undefined;
+      const body = err.response?.data as { error?: string; message?: string };
       throw new ApiError(body?.error ?? body?.message ?? err.message, status);
     }
     throw err;
@@ -150,7 +150,7 @@ export interface OrderDto {
   buyerUsername: string;
   shippingCarrier: string;
   trackingNumber: string;
-  paidAt: string | null;
+  paidAt: string;
   orderCreatedAt: string;
   orderUpdatedAt: string;
   syncedAt: string;
@@ -164,7 +164,7 @@ export const marketplaceApi = {
   /** Obtém a URL de autorização OAuth do ML/Shopee. Não exige login. */
   getAuthUrl(marketplace: string): Promise<AuthUrlDto> {
     const m = encodeURIComponent(marketplace);
-    return request<unknown>(`/integrations/${m}/auth-url`, {}, false).then(parseAuthUrlDto);
+    return request<string>(`/integrations/${m}/auth-url`, {}, false).then(parseAuthUrlDto);
   },
 
   /**
@@ -230,12 +230,13 @@ export const marketplaceApi = {
 const OAUTH_STATE_PREFIX = 'oauth_state_';
 
 /** Persiste o marketplace associado ao state OAuth antes do redirect. */
-export function storeOAuthState(state: string, marketplace: string): void {
-  localStorage.setItem(`${OAUTH_STATE_PREFIX}${state}`, marketplace);
-}
+export function storeOAuthState(state: string, marketplace: string): string{
+    localStorage.setItem(`${OAUTH_STATE_PREFIX}${state}`, marketplace);
+    return marketplace;
+  }
 
 /** Recupera (e remove) o marketplace associado ao state OAuth após o redirect. */
-export function consumeOAuthState(state: string): string | null {
+export function consumeOAuthState(state: string): string {
   const key   = `${OAUTH_STATE_PREFIX}${state}`;
   const value = localStorage.getItem(key);
   if (value) localStorage.removeItem(key);

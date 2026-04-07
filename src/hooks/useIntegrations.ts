@@ -7,16 +7,16 @@ interface IntegrationConnection {
   id: string;
   provider: string;
   status: string;
-  external_shop_id: string | null;
-  shop_name: string | null;
-  scopes: string | null;
-  token_expires_at: string | null;
-  last_sync_at: string | null;
-  next_sync_at: string | null;
+  external_shop_id: string;
+  shop_name: string;
+  scopes: string;
+  token_expires_at: string;
+  last_sync_at: string;
+  next_sync_at: string;
   auto_sync_enabled: boolean;
   auto_sync_frequency_minutes: number;
-  last_error_code: string | null;
-  last_error_message: string | null;
+  last_error_code: string;
+  last_error_message: string;
   created_at: string;
   updated_at: string;
 }
@@ -27,8 +27,8 @@ interface SyncLog {
   user_id: string;
   type: string;
   status: string;
-  message: string | null;
-  metadata: Record<string, string> | null;
+  message: string;
+  metadata: Record<string, string>;
   created_at: string;
 }
 
@@ -110,7 +110,7 @@ export function useIntegrations() {
   const manualAuth = useMutation({
     mutationFn: async ({ provider, shopId, accessToken, refreshToken }: { provider: string; shopId: string; accessToken: string; refreshToken?: string }) => {
       const { data, error } = await supabase.functions.invoke('integration-manual-auth', {
-        body: { provider, shop_id: shopId, access_token: accessToken, refresh_token: refreshToken || null },
+        body: { provider, shop_id: shopId, access_token: accessToken, refresh_token: refreshToken},
       });
       if (error) throw error;
       return data;

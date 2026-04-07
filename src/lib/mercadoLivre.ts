@@ -10,7 +10,7 @@ const mlHttp = axios.create({
 
 function mlErrorMessage(err: unknown): string {
   if (err instanceof AxiosError) {
-    const body = err.response?.data as { error?: string; message?: string } | undefined;
+    const body = err.response?.data as { error?: string; message?: string };
     return body?.error ?? body?.message ?? err.message;
   }
   return err instanceof Error ? err.message : String(err);
@@ -28,7 +28,7 @@ async function authRequest<T>(path: string, config: AxiosRequestConfig = {}): Pr
       ...config,
       headers: {
         Authorization: `Bearer ${session.access_token}`,
-        ...(config.headers as Record<string, string> | undefined),
+        ...(config.headers as Record<string, string>),
       },
     });
     return data;
@@ -57,7 +57,7 @@ export async function fetchMercadoLivreAddresses(): Promise<MeliAddress[]> {
   return authRequest<MeliAddress[]>("/me/addresses", { method: "GET" });
 }
 
-export async function createMercadoLivreItem(itemData: Record<string, unknown>): Promise<MeliItem> {
+export async function createMercadoLivreItem(itemData: Record<string, string>): Promise<MeliItem> {
   return authRequest<MeliItem>("/items", { method: "POST", data: itemData });
 }
 

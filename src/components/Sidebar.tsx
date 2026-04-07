@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Truck, Link2, Menu, X,
   ChevronRight, Settings, ShoppingCart, DollarSign,
 } from "lucide-react";
-import fortLogo from "@/assets/fort-logo.png";
+import fortLogo from "../assets/products/fort-logo.png";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard",   path: "/"           },

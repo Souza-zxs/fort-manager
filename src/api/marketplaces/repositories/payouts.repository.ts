@@ -1,5 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from "../../../database.types";
+import { Database } from "../infra/database/supabase";
 import { Payout, CreatePayoutDto, PayoutStatus } from '../types/marketplace.types';
 import { PayoutUpdate } from '../infra/database/supabase';
 import { PayoutInsert } from '../infra/database/supabase';

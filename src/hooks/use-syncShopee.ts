@@ -11,7 +11,7 @@ export interface SyncedOrder {
   buyer_username: string;
   shipping_carrier: string;
   tracking_number: string;
-  paid_at: string | null;
+  paid_at: string;
   order_created_at: string;
   order_updated_at: string;
   synced_at: string;
@@ -21,7 +21,7 @@ export interface SyncedPayment {
   id: string;
   integration_id: string;
   external_transaction_id: string;
-  order_id: string | null;
+  order_id: string;
   amount: number;
   marketplace_fee: number;
   net_amount: number;
@@ -37,11 +37,11 @@ export interface SyncedFee {
   id: string;
   integration_id: string;
   external_fee_id: string;
-  order_id: string | null;
+  order_id: string;
   fee_type: string;
   amount: number;
   currency: string;
-  description: string | null;
+  description: string;
   fee_date: string;
 }
 
@@ -132,7 +132,7 @@ function computeStats(
   };
 }
 
-export function useShopeeSync(connectionId: string | null) {
+export function useShopeeSync(connectionId: string) {
   return useQuery({
     queryKey: ['shopee-sync', connectionId],
     enabled: !!connectionId,
