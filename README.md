@@ -1,73 +1,174 @@
-# Welcome to your Lovable project
+# Fort Manager
 
-## Project info
+A full-stack e-commerce management dashboard for Brazilian marketplace sellers. Built with React, Express, and Supabase to centralize orders, products, and finances from Mercado Livre and Shopee.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🏗 Architecture
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+├── src/                    # React frontend (Vite + TypeScript)
+│   ├── api/               # API integration layer
+│   │   └── marketplaces/  # Marketplace adapters (ML, Shopee)
+│   ├── components/        # UI components (shadcn-ui)
+│   ├── hooks/            # Custom React hooks
+│   ├── lib/              # Utilities and API clients
+│   └── pages/            # Application pages
+│
+├── server/               # Express.js backend
+│   ├── routes/           # API routes
+│   └── index.ts          # Server entry point
+│
+└── supabase/             # Database migrations
+    └── migrations/       # SQL schema definitions
 ```
 
-**Edit a file directly in GitHub**
+## 🛠 Tech Stack
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+**Frontend:**
+- React 18 + TypeScript
+- Vite (build tool)
+- Tailwind CSS + shadcn-ui
+- React Router (routing)
+- TanStack Query (server state)
+- Recharts (data visualization)
+- Zod + React Hook Form (validation)
 
-**Use GitHub Codespaces**
+**Backend:**
+- Express.js (API server)
+- TypeScript (tsx for hot reload)
+- Supabase (database + auth)
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+**Database:**
+- PostgreSQL (via Supabase)
+- Row-level security (RLS)
 
-## What technologies are used for this project?
+## 📋 Features
 
-This project is built with:
+- **Dashboard** - Real-time metrics and order overview
+- **Orders** - Track and manage orders from multiple marketplaces
+- **Products** - Product catalog management
+- **Deliveries** - Shipping tracking and status
+- **Finance** - Revenue, fees, and payout tracking
+- **Integrations** - OAuth connection for Mercado Livre / Shopee
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🚀 Getting Started
 
-## How can I deploy this project?
+### Prerequisites
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+- Node.js 20+
+- npm or bun
+- Supabase account (for database + auth)
 
-## Can I connect a custom domain to my Lovable project?
+### Installation
 
-Yes, you can!
+```bash
+# Clone the repository
+git clone https://github.com/your-repo/fort-manager.git
+cd fort-manager
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+# Install dependencies
+npm install
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+# Create environment file
+cp .env.example .env
+```
+
+### Environment Variables
+
+Create a `.env` file with the following variables:
+
+```env
+# Supabase
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Mercado Livre (if using)
+VITE_ML_CLIENT_ID=your_ml_client_id
+VITE_ML_CLIENT_SECRET=your_ml_client_secret
+VITE_ML_REDIRECT_URI=http://localhost:5173/integracoes
+```
+
+### Running the Development Server
+
+```bash
+# Start both frontend and backend
+npm run dev
+
+# Or run them separately:
+npm run dev:frontend  # Frontend only (port 8080)
+npm run dev:backend   # Backend only (port 3001)
+```
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+The build output will be in the `dist/` directory.
+
+## 📁 Project Structure
+
+| Directory | Description |
+|-----------|-------------|
+| `src/pages/` | React page components (Dashboard, Pedidos, Produtos, etc.) |
+| `src/components/ui/` | shadcn-ui component library |
+| `src/hooks/` | Custom React hooks (useOrders, useIntegrations) |
+| `src/lib/` | API clients, utilities, Supabase config |
+| `server/routes/` | Express API routes |
+| `supabase/migrations/` | Database schema SQL files |
+
+## 🧪 Testing
+
+```bash
+# Run unit tests
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+```
+
+## 📦 Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start dev server (frontend + backend) |
+| `npm run build` | Build for production |
+| `npm run lint` | Run ESLint |
+| `npm run test` | Run Vitest tests |
+| `npm run preview` | Preview production build |
+
+## 🔌 API Endpoints
+
+### Marketplace Integration
+
+- `GET /api/marketplaces` - List connected integrations
+- `POST /api/marketplaces/:marketplace/auth-url` - Get OAuth URL
+- `POST /api/marketplaces/:marketplace/callback` - Handle OAuth callback
+- `POST /api/marketplaces/:id/sync` - Trigger manual sync
+- `GET /api/marketplaces/orders` - List all orders
+- `GET /api/marketplaces/finance/summary` - Financial summary
+
+### Mercado Livre (Legacy)
+
+- `POST /api/mercadolivre/token` - Exchange auth code
+- `POST /api/mercadolivre/token/refresh` - Refresh token
+- `GET /api/mercadolivre/user/:id` - Get user data
+- `GET /api/mercadolivre/items` - List items
+- `POST /api/mercadolivre/items` - Create item
+
+## 🗄 Database Schema
+
+The database includes these main tables:
+
+- `integrations` - Connected marketplace accounts
+- `orders` - Synced orders from marketplaces
+- `order_items` - Line items for each order
+- `payments` - Payment transactions
+- `fees` - Marketplace fees
+- `payouts` - Payout/repasse records
+
+See `supabase/migrations/` for the complete schema.
+
+## 📄 License
+
+MIT License - feel free to use this project for your own purposes.
