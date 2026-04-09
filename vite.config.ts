@@ -30,4 +30,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  define: {
+    "import.meta.env.VITE_API_URL": JSON.stringify("https://fortmanager2.vercel.app"),
+  },
 }));
