@@ -3,7 +3,7 @@ import { supabase } from './supabase';
 
 const http = axios.create({
   baseURL: `/api/marketplaces`,
-  timeout: 15_000,
+  timeout: 30_000, // 30s - suficiente para cold start do Render + chamada externa
   headers: { 'Content-Type': 'application/json' },
 });
 

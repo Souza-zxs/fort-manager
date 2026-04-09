@@ -58,7 +58,7 @@ router.post('/token', async (req, res) => {
     const { data } = await axios.post(
       `${ML_API_BASE}/oauth/token`,
       params,
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30_000 },
     );
     return res.json(data);
   } catch (err) {
@@ -100,7 +100,7 @@ router.post('/token/refresh', async (req, res) => {
     const { data } = await axios.post(
       `${ML_API_BASE}/oauth/token`,
       params,
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30_000 },
     );
     return res.json(data);
   } catch (err) {

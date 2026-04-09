@@ -28,7 +28,7 @@ export class ShopeeAdapter implements MarketplaceAdapter {
     this.http = axios.create({
       baseURL: config.baseUrl,
       headers: { 'Content-Type': 'application/json' },
-      timeout: 15000,
+      timeout: 30000,
     });
   }
 

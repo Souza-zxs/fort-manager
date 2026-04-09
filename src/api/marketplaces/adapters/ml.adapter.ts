@@ -25,7 +25,7 @@ export class MercadoLivreAdapter {
 
   constructor(credentials: MeliCredentials) {
     this.credentials = credentials;
-    this.client = axios.create({ baseURL: BASE_URL });
+    this.client = axios.create({ baseURL: BASE_URL, timeout: 30_000 });
     this._setupInterceptors();
   }
 
@@ -89,7 +89,7 @@ export class MercadoLivreAdapter {
         redirect_uri:  redirectUri,
         code,
       }),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30_000 },
     );
     return data;
   }
@@ -106,7 +106,7 @@ export class MercadoLivreAdapter {
         client_secret: this.credentials.client_secret,
         refresh_token: this.credentials.refresh_token,
       }),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30_000 },
     );
     this.credentials.access_token  = data.access_token;
     this.credentials.refresh_token = data.refresh_token;

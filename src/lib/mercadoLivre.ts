@@ -5,7 +5,7 @@ import type { MeliItem, MeliUser } from "@/api/marketplaces/types/mercadolivre-t
 
 const mlHttp = axios.create({
   baseURL: `${resolveApiOrigin()}/api/marketplaces/mercadolivre`,
-  timeout: 20_000,
+  timeout: 30_000,
 });
 
 function mlErrorMessage(err: unknown): string {
