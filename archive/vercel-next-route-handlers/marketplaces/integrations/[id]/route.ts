@@ -6,7 +6,11 @@ import { PaymentsRepository } from '@/api/marketplaces/repositories/payments.rep
 import { MarketplaceAuthService } from '@/api/marketplaces/services/auth.service';
 import { MarketplaceSyncService } from '@/api/marketplaces/services/sync.service';
 import { createClient } from '@supabase/supabase-js';
-import { UnauthorizedError, BadRequestError } from '@/api/marketplaces/shared/errors/errors';
+import {
+  UnauthorizedError,
+  BadRequestError,
+  NotFoundError,
+} from '@/api/marketplaces/shared/errors/errors';
 
 // Helper: extrai userId do token JWT
 async function getUserIdFromRequest(request: NextRequest): Promise<string> {
@@ -36,7 +40,14 @@ async function withErrorHandling<T>(fn: () => Promise<T>): Promise<NextResponse>
     return NextResponse.json(data);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    const status = error instanceof UnauthorizedError ? 401 : error instanceof BadRequestError ? 400 : 500;
+    const status =
+      error instanceof UnauthorizedError
+        ? 401
+        : error instanceof BadRequestError
+          ? 400
+          : error instanceof NotFoundError
+            ? 404
+            : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }
@@ -49,9 +60,10 @@ export async function DELETE(
   const { id } = await params;
   
   return withErrorHandling(async () => {
-    await getUserIdFromRequest(request); // apenas valida auth
+    const userId = await getUserIdFromRequest(request);
     const db = getSupabaseClient();
     const integrationRepo = new IntegrationRepository(db);
+    await integrationRepo.findByIdForUser(id, userId);
     await integrationRepo.deactivate(id);
     return { message: 'Integration disconnected' };
   });
@@ -69,12 +81,14 @@ export async function POST(
     const db = getSupabaseClient();
     
     const integrationRepo = new IntegrationRepository(db);
+    await integrationRepo.findByIdForUser(id, userId);
+
     const ordersRepo = new OrdersRepository(db);
     const paymentsRepo = new PaymentsRepository(db);
-    
+
     const authService = new MarketplaceAuthService(integrationRepo);
     const syncService = new MarketplaceSyncService(authService, integrationRepo, ordersRepo, paymentsRepo);
-    
+
     const result = await syncService.syncOrders(id);
     return result;
   });

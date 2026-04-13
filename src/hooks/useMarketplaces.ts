@@ -67,11 +67,13 @@ export function useHandleCallback() {
       marketplace,
       code,
       shopId,
+      state,
     }: {
       marketplace: string;
       code: string;
       shopId?: string;
-    }) => marketplaceApi.handleCallback(marketplace, code, shopId),
+      state?: string;
+    }) => marketplaceApi.handleCallback(marketplace, code, shopId, state),
 
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['integrations'] });

@@ -30,7 +30,7 @@ async function getToken(): Promise<string> {
 }
 
 /** Evita crash quando o servidor devolve HTML, objeto ou null em vez de JSON array. */
-function ensureJsonArray<T>(value: string): T[] {
+function ensureJsonArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
@@ -38,7 +38,7 @@ function ensureJsonArray<T>(value: string): T[] {
  * Resposta de auth-url deve ser JSON { url, state }. HTML (404 SPA) ou {} quebra o OAuth
  * e `window.location.href = undefined` vira navegação para /undefined.
  */
-function parseAuthUrlDto(raw: string): AuthUrlDto {
+function parseAuthUrlDto(raw: unknown): AuthUrlDto {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw new ApiError(
       'Resposta inválida ao pedir URL de autorização. Confirme se o backend Express está no ar em /api/marketplaces (deploy da API, não só o front estático).',
@@ -160,22 +160,28 @@ export interface OrderDto {
 // ── API pública ────────────────────────────────────────────────────────────────
 
 export const marketplaceApi = {
-  /** Obtém a URL de autorização OAuth do ML/Shopee. Não exige login. */
+  /** Obtém a URL de autorização OAuth do ML/Shopee. Exige login. */
   getAuthUrl(marketplace: string): Promise<AuthUrlDto> {
     const m = encodeURIComponent(marketplace);
-    return request<string>(`/integrations/${m}/auth-url`, {}, false).then(parseAuthUrlDto);
+    return request<unknown>(`/integrations/${m}`).then(parseAuthUrlDto);
   },
 
   /**
    * Envia o code OAuth ao backend para trocar por access_token + refresh_token
    * e persistir a integração no Supabase.
    */
-  handleCallback(marketplace: string, code: string, shopId?: string): Promise<CallbackResultDto> {
-    const params = new URLSearchParams({ code });
-    if (shopId) params.set('shop_id', shopId);
+  handleCallback(marketplace: string, code: string, shopId?: string, state?: string): Promise<CallbackResultDto> {
     const m = encodeURIComponent(marketplace);
     return request<CallbackResultDto>(
-      `/integrations/${m}/callback?${params.toString()}`,
+      `/integrations/${m}`,
+      {
+        method: 'POST',
+        data: {
+          code,
+          shop_id: shopId,
+          state,
+        },
+      },
     );
   },
 

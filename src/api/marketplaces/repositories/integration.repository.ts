@@ -18,6 +18,20 @@ export class IntegrationRepository {
     return this.toEntity(data);
   }
 
+  /** Active integration by id only if it belongs to the given user (prevents IDOR). */
+  async findByIdForUser(id: string, userId: string): Promise<Integration> {
+    const { data, error } = await this.db
+      .from('integrations')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+
+    if (error || !data) throw new IntegrationNotFoundError(id);
+    return this.toEntity(data);
+  }
+
   async findByUserId(userId: string): Promise<Integration[]> {
     const { data, error } = await this.db
       .from('integrations')

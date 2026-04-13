@@ -31,8 +31,9 @@ export default function AuthCallback() {
       marketplace,
       code,
       shopId,
-    }: { marketplace: string; code: string; shopId?: string }) =>
-      marketplaceApi.handleCallback(marketplace, code, shopId),
+      state,
+    }: { marketplace: string; code: string; shopId?: string; state?: string }) =>
+      marketplaceApi.handleCallback(marketplace, code, shopId, state),
 
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["integrations"] });
@@ -96,7 +97,7 @@ export default function AuthCallback() {
       marketplace = "shopee";
     }
 
-    callbackMutation.mutate({ marketplace, code, shopId });
+    callbackMutation.mutate({ marketplace, code, shopId, state: state ?? undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

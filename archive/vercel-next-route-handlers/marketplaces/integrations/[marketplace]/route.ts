@@ -49,7 +49,7 @@ async function withErrorHandling<T>(fn: () => Promise<T>): Promise<NextResponse>
   }
 }
 
-// ── GET /api/marketplaces/integrations/:marketplace/auth-url ──
+// ── GET /api/marketplaces/integrations/:marketplace ──
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ marketplace: string }> }
@@ -57,14 +57,15 @@ export async function GET(
   const { marketplace } = await params;
   return withErrorHandling(async () => {
     assertMarketplace(marketplace);
+    const userId = await getUserIdFromRequest(request);
     const db = getSupabaseClient();
     const integrationRepo = new IntegrationRepository(db);
     const authService = new MarketplaceAuthService(integrationRepo);
-    return authService.getAuthorizationUrl(marketplace);
+    return authService.getAuthorizationUrl(marketplace, userId);
   });
 }
 
-// ── POST /api/marketplaces/integrations/:marketplace/callback ──
+// ── POST /api/marketplaces/integrations/:marketplace ──
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ marketplace: string }> }
@@ -74,15 +75,21 @@ export async function POST(
   return withErrorHandling(async () => {
     assertMarketplace(marketplace);
     const userId = await getUserIdFromRequest(request);
-    const { code, shop_id } = await request.json();
+    const { code, shop_id, state } = await request.json();
 
     if (!code) {
       throw new BadRequestError('Missing authorization code');
+    }
+    if (marketplace === 'mercadolivre' && !state) {
+      throw new BadRequestError('Missing OAuth state');
     }
 
     const db = getSupabaseClient();
     const integrationRepo = new IntegrationRepository(db);
     const authService = new MarketplaceAuthService(integrationRepo);
+    if (marketplace === 'mercadolivre') {
+      authService.validateCallbackState(state, marketplace, userId);
+    }
 
     const integration = await authService.handleCallback(marketplace, code, shop_id ?? '', userId);
 

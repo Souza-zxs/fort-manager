@@ -22,8 +22,9 @@ export function createMarketplaceRouter(): Router {
   const integrationController = new IntegrationController(authService, syncService, integrationRepo);
   const ordersController = new OrdersController(ordersRepo, paymentsRepo, integrationRepo);
 
-  router.get('/integrations/:marketplace/auth-url', integrationController.getAuthUrl);
-  router.get('/integrations/:marketplace/callback', authMiddleware, integrationController.handleCallback);
+  // OAuth: mesmo contrato das rotas Next usadas pelo frontend (marketplaceApi)
+  router.get('/integrations/:marketplace', authMiddleware, integrationController.getAuthUrl);
+  router.post('/integrations/:marketplace', authMiddleware, integrationController.handleCallback);
   router.get('/integrations', authMiddleware, integrationController.listIntegrations);
   router.delete('/integrations/:id', authMiddleware, integrationController.disconnect);
   router.post('/integrations/:id/sync', authMiddleware, integrationController.triggerSync);

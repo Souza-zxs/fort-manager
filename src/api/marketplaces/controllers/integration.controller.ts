@@ -38,7 +38,8 @@ export class IntegrationController {
     try {
       const { marketplace } = (req as AuthenticatedRequest).params;
       assertMarketplace(marketplace);
-      const result = this.authService.getAuthorizationUrl(marketplace);
+      const userId = (req as AuthenticatedRequest).userId;
+      const result = this.authService.getAuthorizationUrl(marketplace, userId);
       (res as AuthenticatedResponse).json(result);
     } catch (error) {
       next(error);
@@ -50,10 +51,19 @@ export class IntegrationController {
       const { marketplace } = (req as AuthenticatedRequest).params;
       assertMarketplace(marketplace);
 
-      const { code, shop_id } = (req as AuthenticatedRequest).query as { code: string; shop_id: string };
       const userId = (req as AuthenticatedRequest).userId;
+      const body = (req as AuthenticatedRequest & { body?: Record<string, unknown> }).body ?? {};
+      const code = typeof body.code === 'string' ? body.code : undefined;
+      const shop_id = typeof body.shop_id === 'string' ? body.shop_id : undefined;
+      const state = typeof body.state === 'string' ? body.state : undefined;
 
       if (!code) throw new BadRequestError('Missing authorization code');
+      if (marketplace === 'mercadolivre' && !state) {
+        throw new BadRequestError('Missing OAuth state');
+      }
+      if (marketplace === 'mercadolivre') {
+        this.authService.validateCallbackState(state!, marketplace, userId);
+      }
 
       const integration = await this.authService.handleCallback(marketplace, code, shop_id ?? '', userId);
 
@@ -91,6 +101,8 @@ export class IntegrationController {
   disconnect = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = (req as AuthenticatedRequest).params;
+      const userId = (req as AuthenticatedRequest).userId;
+      await this.integrationRepository.findByIdForUser(id, userId);
       await this.integrationRepository.deactivate(id);
       (res as AuthenticatedResponse).json({ message: 'Integration disconnected' });
     } catch (error) {
@@ -101,6 +113,8 @@ export class IntegrationController {
   triggerSync = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = (req as AuthenticatedRequest).params;
+      const userId = (req as AuthenticatedRequest).userId;
+      await this.integrationRepository.findByIdForUser(id, userId);
       const result = await this.syncService.syncOrders(id);
       (res as AuthenticatedResponse).json(result);
     } catch (error) {
