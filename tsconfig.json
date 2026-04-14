@@ -18,14 +18,9 @@
     "jsx": "preserve",
     "resolveJsonModule": true
   },
-  "include": ["src", "api", "server"],
-  "files": [],
+  "include": ["src", "server", "api"],
+  "exclude": ["node_modules", "dist"],
   "references": [
-    {
-      "path": "./tsconfig.app.json"
-    },
-    {
-      "path": "./tsconfig.node.json"
-    }
+    { "path": "./tsconfig.app.json" }
   ]
 }

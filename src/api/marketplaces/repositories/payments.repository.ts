@@ -69,7 +69,7 @@ export class PaymentsRepository {
 
     const { data, error } = await this.db
       .from('payments')
-      .upsert(row, { onConflict: 'integration_id,external_transaction_id' })
+      .upsert(row as any, { onConflict: 'integration_id,external_transaction_id' })
       .select()
       .single();
 

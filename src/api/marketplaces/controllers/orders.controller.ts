@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { OrdersRepository } from '../repositories/orders.repository';
 import { PaymentsRepository } from '../repositories/payments.repository';
 import { IntegrationRepository } from '../repositories/integration.repository';
+import { AuthenticatedResponse } from '../shared/middleware/auth.middleware';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -13,11 +14,6 @@ interface AuthenticatedRequest extends Request {
     to?: string;
   };
   
-}
-
-interface AuthenticatedResponse extends Response {
-  json: (body: unknown) => AuthenticatedResponse;
-  status (code: number): AuthenticatedResponse; 
 }
 
 export class OrdersController {

@@ -85,7 +85,7 @@ export class IntegrationRepository {
 
     const { data, error } = await this.db
       .from('integrations')
-      .upsert(row, { onConflict: 'user_id,marketplace,shop_id' })
+      .upsert(row as any, { onConflict: 'user_id,marketplace,shop_id' })
       .select()
       .single();
 
@@ -104,7 +104,7 @@ export class IntegrationRepository {
 
     const { error } = await this.db
       .from('integrations')
-      .update(update)
+      .update(update as any)
       .eq('id', id);
 
     if (error) throw new Error(error.message);
@@ -118,7 +118,7 @@ export class IntegrationRepository {
 
     const { error } = await this.db
       .from('integrations')
-      .update(update)
+      .update(update as any)
       .eq('id', id);
 
     if (error) throw new Error(error.message);

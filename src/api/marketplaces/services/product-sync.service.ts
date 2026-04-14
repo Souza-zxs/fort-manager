@@ -1,7 +1,7 @@
 import { getAdapter } from '../adapters/adapter.registry';
 import { IntegrationRepository } from '../repositories/integration.repository';
 import { MarketplaceAuthService } from '../services/auth.service';
-import { Integration, Product, ProductVariation } from '../types/marketplace.types';
+import { Integration } from '../types/marketplace.types';
 
 export interface SyncProductResult {
   productId: string;
@@ -41,7 +41,7 @@ export class ProductSyncService {
     const accessToken = await this.authService.getValidAccessToken(integration);
     const adapter = getAdapter(integration.marketplace as any);
     
-    const userId = integration.credentials['user_id'] as number;
+    const userId = integration.extra?.['user_id'] as number;
     if (!userId) {
       throw new Error('user_id não encontrado nas credenciais');
     }

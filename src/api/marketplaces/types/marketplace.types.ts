@@ -95,6 +95,8 @@ export interface Integration {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  // Dados extras do marketplace (user_id do ML, etc)
+  extra?: Record<string, unknown>;
 }
 
 export interface CreateIntegrationDto {

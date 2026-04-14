@@ -1,15 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../errors/errors';
 
-interface ResponseType extends Response {
-  status (code: number): ResponseType;
-  json: (body: { status: string; message: string }) => ResponseType;
-}
-
 export function errorHandler(
   error: Error,
   _req: Request,
-  res: ResponseType,
+  res: Response,
   _next: NextFunction,
 ): void {
   if (error instanceof AppError) {

@@ -61,7 +61,7 @@ export class OrdersRepository {
 
     const { data, error } = await this.db
       .from('orders')
-      .upsert(row, { onConflict: 'integration_id,external_order_id' })
+      .upsert(row as any, { onConflict: 'integration_id,external_order_id' })
       .select()
       .single();
 
@@ -103,7 +103,7 @@ export class OrdersRepository {
 
     const { error } = await this.db
       .from('order_items')
-      .upsert(rows, { onConflict: 'order_id,external_item_id' });
+      .upsert(rows as any, { onConflict: 'order_id,external_item_id' });
 
     if (error) throw new Error(error.message);
   }

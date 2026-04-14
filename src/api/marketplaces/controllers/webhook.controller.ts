@@ -155,7 +155,6 @@ export class WebhookController {
 
       // Get valid access token
       const integrationData = await this.integrationRepository.findById(integration.id);
-      const { getValidAccessToken } = await import('../services/auth.service');
       
       // Create a simple auth service to get token (in real impl, would use DI)
       const authService = new MarketplaceAuthService(this.integrationRepository);

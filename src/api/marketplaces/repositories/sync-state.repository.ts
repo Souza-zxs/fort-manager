@@ -25,7 +25,7 @@ export class SyncStateRepository {
 
     const { error } = await this.db
       .from('sync_state')
-      .upsert(row, { onConflict: 'integration_id,entity_type' });
+      .upsert(row as any, { onConflict: 'integration_id,entity_type' });
 
     if (error) throw new Error(error.message);
   }
