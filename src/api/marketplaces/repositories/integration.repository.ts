@@ -104,21 +104,21 @@ export class IntegrationRepository {
 
     const { error } = await this.db
       .from('integrations')
-      .update(update as any)
+      .update(update)
       .eq('id', id);
 
     if (error) throw new Error(error.message);
   }
 
   async deactivate(id: string): Promise<void> {
-    const update: IntegrationUpdate = {
+    const update = {
       is_active: false,
       updated_at: new Date().toISOString(),
     };
 
     const { error } = await this.db
       .from('integrations')
-      .update(update as any)
+      .update(update)
       .eq('id', id);
 
     if (error) throw new Error(error.message);
