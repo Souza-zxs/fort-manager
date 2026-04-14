@@ -5,6 +5,28 @@ import { Payment, CreatePaymentDto, FinanceSummary } from '../types/marketplace.
 export class PaymentsRepository {
   constructor(private readonly db: SupabaseClient<Database>) {}
 
+  async findById(id: string): Promise<Payment | null> {
+    const { data, error } = await this.db
+      .from('payments')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+    return data ? this.toEntity(data) : null;
+  }
+
+  async findByTransactionId(transactionId: string): Promise<Payment | null> {
+    const { data, error } = await this.db
+      .from('payments')
+      .select('*')
+      .eq('external_transaction_id', transactionId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+    return data ? this.toEntity(data) : null;
+  }
+
   async findByIntegrationId(integrationId: string): Promise<Payment[]> {
     const { data, error } = await this.db
       .from('payments')

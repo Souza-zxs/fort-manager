@@ -9,6 +9,8 @@ export interface Database {
       payments: { Row: PaymentRow; Insert: PaymentInsert; Update: PaymentUpdate };
       fees: { Row: FeeRow; Insert: FeeInsert; Update: Partial<FeeRow> };
       payouts: { Row: PayoutRow; Insert: PayoutInsert; Update: PayoutUpdate };
+      sync_state: { Row: SyncStateRow; Insert: SyncStateInsert; Update: SyncStateUpdate };
+      webhook_events: { Row: WebhookEventRow; Insert: WebhookEventInsert; Update: WebhookEventUpdate };
     };
   };
 }
@@ -120,6 +122,34 @@ export interface PayoutRow {
 
 export type PayoutInsert = Omit<PayoutRow, 'id' | 'created_at'>;
 export type PayoutUpdate = Partial<Omit<PayoutRow, 'id' | 'integration_id' | 'created_at'>>;
+
+export interface SyncStateRow {
+  id: string;
+  integration_id: string;
+  entity_type: string;
+  last_sync_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SyncStateInsert = Omit<SyncStateRow, 'id' | 'created_at' | 'updated_at'>;
+export type SyncStateUpdate = Partial<Omit<SyncStateRow, 'id' | 'integration_id' | 'created_at'>>;
+
+export interface WebhookEventRow {
+  id: string;
+  integration_id: string;
+  topic: string;
+  resource_id: string;
+  resource_url: string;
+  processed: boolean;
+  processing_error: string | null;
+  received_at: string;
+  processed_at: string | null;
+  created_at: string;
+}
+
+export type WebhookEventInsert = Omit<WebhookEventRow, 'id' | 'created_at'>;
+export type WebhookEventUpdate = Partial<Omit<WebhookEventRow, 'id' | 'integration_id' | 'created_at'>>;
 
 let client: SupabaseClient<Database> | null = null;
 

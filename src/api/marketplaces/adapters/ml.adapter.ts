@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosError } from 'axios';
 import {
   MeliCredentials,
   MeliTokenResponse,
@@ -12,12 +12,47 @@ import {
   MeliPayment,
   MeliAccountMovement,
   MeliBalanceSummary,
+  MeliShipment,
+  MeliShipmentLabelResponse,
+  MeliPaymentDetail,
+  MeliRefundDetail,
+  MeliItemVariation,
+  MeliInventoryUpdate,
+  MeliInventoryUpdateResponse,
+  MeliItemWithVariations,
 } from '../types/mercadolivre-types';
 
 const BASE_URL = 'https://api.mercadolibre.com';
 const SITE_ID  = 'MLB'; // Brasil
 
+// Retry config for ML API
+const RETRY_MAX_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 1000;
+const RETRY_MAX_DELAY_MS = 5000;
+
 // ─────────────────────────────────────────────────────────────────────────────
+
+function isRetryableError(error: unknown): boolean {
+  if (error instanceof AxiosError) {
+    const status = error.response?.status;
+    // Retry on 429, 5xx, network errors
+    return (
+      status === 429 ||
+      status === 503 ||
+      status === 504 ||
+      !status // Network error (no response)
+    );
+  }
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    return msg.includes('timeout') || msg.includes('econnrefused') || msg.includes('socket');
+  }
+  return false;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export class MercadoLivreAdapter {
   private client: AxiosInstance;
@@ -34,9 +69,8 @@ export class MercadoLivreAdapter {
   private _setupInterceptors() {
     // Injeta o Bearer token automaticamente em todas as requisições
     this.client.interceptors.request.use(async (config) => {
-      if (this._isTokenExpired()) {
-        await this.refreshToken();
-      }
+      // Retry refresh token if needed
+      await this.refreshTokenWithRetry();
       config.headers['Authorization'] = `Bearer ${this.credentials.access_token}`;
       config.headers['Content-Type']  = 'application/json';
       return config;
@@ -50,6 +84,34 @@ export class MercadoLivreAdapter {
         throw new Error(`[MercadoLivre] ${err.response?.status ?? 0}: ${msg}`);
       },
     );
+  }
+
+  /**
+   * Refresh with retry for interceptor use
+   */
+  private async refreshTokenWithRetry(): Promise<void> {
+    if (!this._isTokenExpired()) return;
+
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= RETRY_MAX_ATTEMPTS; attempt++) {
+      try {
+        await this.refreshToken();
+        return;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        if (!isRetryableError(error) || attempt === RETRY_MAX_ATTEMPTS) {
+          throw lastError;
+        }
+
+        const delay = Math.min(
+          RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1),
+          RETRY_MAX_DELAY_MS
+        );
+        await sleep(delay);
+      }
+    }
+    throw lastError;
   }
 
   private _isTokenExpired(): boolean {
@@ -96,22 +158,45 @@ export class MercadoLivreAdapter {
 
   /**
    * Renova o access_token usando o refresh_token (tokens expiram em 6h)
+   * Com retry para API instável
    */
   async refreshToken(): Promise<MeliTokenResponse> {
-    const { data } = await axios.post<MeliTokenResponse>(
-      `${BASE_URL}/oauth/token`,
-      new URLSearchParams({
-        grant_type:    'refresh_token',
-        client_id:     this.credentials.app_id,
-        client_secret: this.credentials.client_secret,
-        refresh_token: this.credentials.refresh_token,
-      }),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30_000 },
-    );
-    this.credentials.access_token  = data.access_token;
-    this.credentials.refresh_token = data.refresh_token;
-    this.credentials.expires_at    = new Date(Date.now() + data.expires_in * 1000);
-    return data;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= RETRY_MAX_ATTEMPTS; attempt++) {
+      try {
+        const { data } = await axios.post<MeliTokenResponse>(
+          `${BASE_URL}/oauth/token`,
+          new URLSearchParams({
+            grant_type:    'refresh_token',
+            client_id:     this.credentials.app_id,
+            client_secret: this.credentials.client_secret,
+            refresh_token: this.credentials.refresh_token,
+          }),
+          { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30_000 },
+        );
+
+        this.credentials.access_token  = data.access_token;
+        this.credentials.refresh_token = data.refresh_token;
+        this.credentials.expires_at   = new Date(Date.now() + data.expires_in * 1000);
+        return data;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        if (!isRetryableError(error) || attempt === RETRY_MAX_ATTEMPTS) {
+          throw lastError;
+        }
+
+        const delay = Math.min(
+          RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1),
+          RETRY_MAX_DELAY_MS
+        );
+        console.warn(`[ML] refreshToken attempt ${attempt} failed, retrying in ${delay}ms...`);
+        await sleep(delay);
+      }
+    }
+
+    throw lastError;
   }
 
   // ── Usuário ───────────────────────────────────────────────────────────────
@@ -196,6 +281,94 @@ export class MercadoLivreAdapter {
    */
   async closeItem(itemId: string): Promise<void> {
     await this.updateItem(itemId, { status: 'closed' });
+  }
+
+  // ── Inventário / Variações ─────────────────────────────────────────────────
+
+  /**
+   * Busca item completo com variações
+   */
+  async getItemWithVariations(itemId: string): Promise<MeliItemWithVariations> {
+    const { data } = await this.client.get<MeliItemWithVariations>(
+      `/items/${itemId}`,
+      { params: { include: 'variations,attributes,pictures' } },
+    );
+    return data;
+  }
+
+  /**
+   * Atualiza variação específica (preço/estoque)
+   * IMPORTANTE: ML não permite atualizar diretamente. 
+   * Deve usar PUT /items/{itemId}/variations/{variationId}
+   */
+  async updateVariation(
+    itemId: string,
+    variationId: number,
+    payload: { price?: number; available_quantity?: number; seller_custom_field?: string },
+  ): Promise<MeliItemVariation> {
+    const { data } = await this.client.put<MeliItemVariation>(
+      `/items/${itemId}/variations/${variationId}`,
+      payload,
+    );
+    return data;
+  }
+
+  /**
+   * Atualiza estoque de uma variação usando variação por attribute (SKU)
+   * Busca variation_id pelo seller_custom_field (SKU)
+   */
+  async updateInventoryBySku(
+    itemId: string,
+    sku: string,
+    updates: { price?: number; available_quantity?: number },
+  ): Promise<MeliInventoryUpdateResponse> {
+    // Primeiro, buscar o item para encontrar a variação pelo SKU
+    const item = await this.getItemWithVariations(itemId);
+    const variation = item.variations.find(v => v.seller_custom_field === sku);
+
+    if (!variation) {
+      throw new Error(`Variação com SKU "${sku}" não encontrada no item ${itemId}`);
+    }
+
+    const payload: any = {};
+    if (updates.price !== undefined) payload.price = updates.price;
+    if (updates.available_quantity !== undefined) payload.available_quantity = updates.available_quantity;
+
+    const updated = await this.updateVariation(itemId, variation.id, payload);
+
+    return {
+      id: itemId,
+      status: item.status,
+      price: updated.price,
+      available_quantity: updated.available_quantity,
+      variations: item.variations,
+    };
+  }
+
+  /**
+   * Atualiza inventário em lote (até 200 por chamada)
+   * Formato: Array de { item_id, variation_id?, price?, quantity? }
+   */
+  async bulkUpdateInventory(
+    updates: Array<{
+      item_id: string;
+      variation_id?: number;
+      price?: number;
+      available_quantity?: number;
+    }>,
+  ): Promise<{ item_id: string; status: string; error?: string }[]> {
+    const { data } = await this.client.put<Array<{ item_id: string; status: string; error?: string }>>(
+      `/items/bulk`,
+      { updates },
+    );
+    return data;
+  }
+
+  /**
+   * Remove uma variação
+   */
+  async deleteVariation(itemId: string, variationId: number): Promise<void> {
+    await this.client.delete(`/items/${itemId}/variations/${variationId}`);
   }
 
   // ── Pedidos ───────────────────────────────────────────────────────────────
@@ -286,5 +459,153 @@ export class MercadoLivreAdapter {
       { params: { price, listing_type_id: listingTypeId, category_id: categoryId, currency_id: 'BRL' } },
     );
     return data[0]?.sale_fee_amount ?? 0;
+  }
+
+  // ── Shipments / Envios ─────────────────────────────────────────────────────
+
+  /**
+   * Busca dados de um envio específico
+   */
+  async getShipment(shipmentId: number): Promise<MeliShipment> {
+    const { data } = await this.client.get<MeliShipment>(`/shipments/${shipmentId}`);
+    return data;
+  }
+
+  /**
+   * Lista opções de envio disponíveis para uma região
+   */
+  async getShippingOptions(
+    dimensions: { weight: number; height: number; width: number },
+    postalCodeFrom: string,
+    postalCodeTo: string,
+  ): Promise<{
+    options: Array<{ id: number; name: string; currency_id: string; cost: number; delivery_type: string }>;
+  }> {
+    const { data } = await this.client.get<{
+      options: Array<{ id: number; name: string; currency_id: string; cost: number; delivery_type: string }>;
+    }>(
+      `/shipping_options`,
+      {
+        params: {
+          weight: dimensions.weight,
+          height: dimensions.height,
+          width: dimensions.width,
+          postal_code_from: postalCodeFrom,
+          postal_code_to: postalCodeTo,
+        },
+      },
+    );
+    return data;
+  }
+
+  /**
+   * Gera etiqueta de envio (PDF)
+   * Requer que o pedido esteja com status 'approved'
+   */
+  async createShipmentLabel(orderId: number): Promise<MeliShipmentLabelResponse> {
+    const { data } = await this.client.post<{ id: number }[]>(
+      `/shipments.labels`,
+      { orders: [orderId] },
+    );
+
+    if (!data || data.length === 0) {
+      throw new Error('Falha ao gerar etiqueta');
+    }
+
+    // Busca os dados do shipment para obter a URL da etiqueta
+    const shipmentId = data[0].id;
+    const shipment = await this.getShipment(shipmentId);
+
+    return {
+      shipment_id: shipment.id,
+      tracking_number: shipment.tracking_number ?? '',
+      tracking_method: shipment.tracking_method ?? '',
+      label_url: `https://api.mercadolibre.com/shipments/${shipmentId}/label`,
+      label_format: 'pdf',
+    };
+  }
+
+  /**
+   * Atualiza código de rastreamento manualmente
+   * Útil quando a transportadora fornece outro código
+   */
+  async updateTrackingNumber(shipmentId: number, trackingNumber: string): Promise<MeliShipment> {
+    const { data } = await this.client.put<MeliShipment>(
+      `/shipments/${shipmentId}`,
+      { tracking_number: trackingNumber },
+    );
+    return data;
+  }
+
+  /**
+   * Cancela um envio (se ainda não foi postado)
+   */
+  async cancelShipment(shipmentId: number): Promise<{ cancellation: boolean }> {
+    const { data } = await this.client.put<{ cancellation: boolean }>(
+      `/shipments/${shipmentId}`,
+      { status: 'cancelled' },
+    );
+    return data;
+  }
+
+  // ── Payments / Pagamentos ─────────────────────────────────────────────────
+
+  /**
+   * Busca detalhes de um pagamento específico (via Mercado Pago API)
+   */
+  async getPaymentDetail(paymentId: string): Promise<MeliPaymentDetail> {
+    const { data } = await this.client.get<MeliPaymentDetail>(
+      `https://api.mercadopago.com/v1/payments/${paymentId}`,
+    );
+    return data;
+  }
+
+  /**
+   * Lista pagamentos de um pedido
+   */
+  async getOrderPayments(orderId: number): Promise<MeliPaymentDetail[]> {
+    const { data } = await this.client.get<MeliPaymentDetail[]>(
+      `/orders/${orderId}/payments`,
+    );
+    return data;
+  }
+
+  /**
+   * Lista estornos de um pagamento
+   */
+  async getPaymentRefunds(paymentId: string): Promise<MeliRefundDetail[]> {
+    const { data } = await this.client.get<MeliRefundDetail[]>(
+      `https://api.mercadopago.com/v1/payments/${paymentId}/refunds`,
+    );
+    return data;
+  }
+
+  /**
+   * Lista todos os estornos ( chargebacks)
+   */
+  async getRefunds(params: {
+    offset?: number;
+    limit?: number;
+    range_date_created?: string;
+  } = {}): Promise<{
+    results: MeliRefundDetail[];
+    paging: { total: number; limit: number; offset: number };
+  }> {
+    const { data } = await this.client.get<{
+      results: MeliRefundDetail[];
+      paging: { total: number; limit: number; offset: number };
+    }>(
+      `/collections/search`,
+      { params: { status: 'refunded', ...params } },
+    );
+    return data;
+  }
+
+  /**
+   * Verifica se houve chargeback (estorno forçado pelo cliente)
+   */
+  async hasChargeback(paymentId: string): Promise<boolean> {
+    const refunds = await this.getPaymentRefunds(paymentId);
+    return refunds.some(r => r.reason === 'chargeback');
   }
 }

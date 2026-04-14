@@ -3,11 +3,27 @@ import { MarketplaceAuthService } from './auth.service';
 import { IntegrationRepository } from '../repositories/integration.repository';
 import { OrdersRepository } from '../repositories/orders.repository';
 import { PaymentsRepository } from '../repositories/payments.repository';
-import {  Integration,  MarketplaceOrder,  MarketplacePayment, CreateOrderDto,  CreatePaymentDto, SyncResult,} from '../types/marketplace.types';
-import { daysAgoUnix, nowUnix } from '../shared/utils';
+import { SyncStateRepository } from '../repositories/sync-state.repository';
+import { 
+  Integration, 
+  MarketplaceOrder, 
+  MarketplacePayment, 
+  CreateOrderDto, 
+  CreatePaymentDto, 
+  SyncResult,
+  OrderStatus,
+} from '../types/marketplace.types';
+import { daysAgoUnix, nowUnix, unixToDate, dateToUnix } from '../shared/utils';
 
 const SYNC_WINDOW_DAYS = 30;
 const PAGE_SIZE = 50;
+
+interface OrderSyncStats {
+  inserted: number;
+  updated: number;
+  failed: number;
+  errors: string[];
+}
 
 export class MarketplaceSyncService {
   constructor(
@@ -15,6 +31,7 @@ export class MarketplaceSyncService {
     private readonly integrationRepository: IntegrationRepository,
     private readonly ordersRepository: OrdersRepository,
     private readonly paymentsRepository: PaymentsRepository,
+    private readonly syncStateRepository: SyncStateRepository,
   ) {}
 
   async syncOrders(integrationId: string): Promise<SyncResult> {
@@ -51,20 +68,98 @@ export class MarketplaceSyncService {
     return Promise.all(integrations.map((i) => this.syncOrders(i.id)));
   }
 
-  private async syncIntegrationOrders(integration: Integration): Promise<number> {
+  /**
+   * Sync orders with idempotency - handles updates correctly
+   * Only fetches orders newer than last sync timestamp for efficiency
+   */
+  async syncIntegrationOrders(integration: Integration): Promise<number> {
     const accessToken = await this.authService.getValidAccessToken(integration);
     const adapter = getAdapter(integration.marketplace);
 
+    // Get last sync timestamp for incremental sync
+    const lastSyncAt = await this.getLastOrderSyncTimestamp(integration.id);
+
+    // Fetch orders from the last sync (or default window if first sync)
+    const timeFrom = lastSyncAt 
+      ? dateToUnix(lastSyncAt) 
+      : daysAgoUnix(SYNC_WINDOW_DAYS);
+
     const orders = await adapter.getAllOrders(accessToken, integration.shopId, {
-      timeFrom: daysAgoUnix(SYNC_WINDOW_DAYS),
+      timeFrom,
       timeTo: nowUnix(),
       pageSize: PAGE_SIZE,
     });
 
-    const dtos = orders.map((order) => this.toOrderDto(order, integration.id));
-    await this.ordersRepository.upsertMany(dtos);
+    const stats = await this.upsertOrdersIdempotently(orders, integration.id);
 
-    return orders.length;
+    console.log(`[Sync] Orders for ${integration.marketplace}/${integration.shopId}: ` +
+      `inserted=${stats.inserted}, updated=${stats.updated}, failed=${stats.failed}`);
+
+    // Update last sync timestamp
+    await this.updateLastOrderSyncTimestamp(integration.id, new Date());
+
+    return stats.inserted + stats.updated;
+  }
+
+  /**
+   * Upsert orders with idempotency - updates existing orders if changed
+   * Returns stats for inserted/updated/failed
+   */
+  private async upsertOrdersIdempotently(
+    orders: MarketplaceOrder[],
+    integrationId: string
+  ): Promise<OrderSyncStats> {
+    const stats: OrderSyncStats = {
+      inserted: 0,
+      updated: 0,
+      failed: 0,
+      errors: [],
+    };
+
+    for (const order of orders) {
+      try {
+        // Check if order exists
+        const existing = await this.ordersRepository.findByExternalId(
+          integrationId,
+          order.externalOrderId
+        );
+
+        // Always upsert - handles both insert and update
+        const dto = this.toOrderDto(order, integrationId);
+        await this.ordersRepository.upsert(dto);
+
+        if (existing) {
+          // Check if status actually changed
+          if (existing.status !== order.status) {
+            stats.updated++;
+            console.log(`[Sync] Order ${order.externalOrderId} status: ${existing.status} → ${order.status}`);
+          } else {
+            // Status unchanged - not counted as update (no actual change)
+          }
+        } else {
+          stats.inserted++;
+        }
+      } catch (error) {
+        stats.failed++;
+        stats.errors.push(`${order.externalOrderId}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    return stats;
+  }
+
+  /**
+   * Get last sync timestamp for incremental sync
+   */
+  private async getLastOrderSyncTimestamp(integrationId: string): Promise<Date | null> {
+    return this.syncStateRepository.getLastSyncTimestamp(integrationId, 'orders');
+  }
+
+  /**
+   * Update last sync timestamp
+   */
+  private async updateLastOrderSyncTimestamp(integrationId: string, timestamp: Date): Promise<void> {
+    await this.syncStateRepository.upsertTimestamp(integrationId, 'orders', timestamp);
   }
 
   private async syncIntegrationPayments(integration: Integration): Promise<number> {

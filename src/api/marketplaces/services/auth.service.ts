@@ -13,6 +13,11 @@ import { createHmac, timingSafeEqual } from 'crypto';
 
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
+// Retry config for ML API
+const RETRY_MAX_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 1000;
+const RETRY_MAX_DELAY_MS = 5000;
+
 interface OAuthStatePayload {
   nonce: string;
   marketplace: MarketplaceName;
@@ -86,7 +91,59 @@ export class MarketplaceAuthService {
       throw new TokenExpiredError(integration.marketplace);
     }
 
-    return this.refreshAndPersist(integration);
+    return this.refreshAndPersistWithRetry(integration);
+  }
+
+  /**
+   * Refresh token with exponential backoff retry
+   */
+  private async refreshAndPersistWithRetry(integration: Integration): Promise<string> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= RETRY_MAX_ATTEMPTS; attempt++) {
+      try {
+        return await this.refreshAndPersist(integration);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        // Only retry on transient errors
+        const isRetryable = this.isRetryableError(error);
+        if (!isRetryable || attempt === RETRY_MAX_ATTEMPTS) {
+          console.error(`[ML] Token refresh failed after ${attempt} attempt(s): ${lastError.message}`);
+          throw lastError;
+        }
+
+        const delay = Math.min(
+          RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1),
+          RETRY_MAX_DELAY_MS
+        );
+        console.warn(`[ML] Token refresh attempt ${attempt} failed, retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
+    }
+
+    throw lastError;
+  }
+
+  private isRetryableError(error: unknown): boolean {
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase();
+      // Retry on network errors, timeouts, 503, 429, 5xx
+      return (
+        message.includes('timeout') ||
+        message.includes('econnrefused') ||
+        message.includes('socket') ||
+        message.includes('503') ||
+        message.includes('429') ||
+        message.includes('rate limit') ||
+        message.includes('service unavailable')
+      );
+    }
+    return false;
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private async refreshAndPersist(integration: Integration): Promise<string> {
