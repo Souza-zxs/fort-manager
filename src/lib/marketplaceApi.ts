@@ -29,15 +29,10 @@ async function getToken(): Promise<string> {
   return session.access_token;
 }
 
-/** Evita crash quando o servidor devolve HTML, objeto ou null em vez de JSON array. */
 function ensureJsonArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
-/**
- * Resposta de auth-url deve ser JSON { url, state }. HTML (404 SPA) ou {} quebra o OAuth
- * e `window.location.href = undefined` vira navegação para /undefined.
- */
 function parseAuthUrlDto(raw: unknown): AuthUrlDto {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw new ApiError(
@@ -160,16 +155,11 @@ export interface OrderDto {
 // ── API pública ────────────────────────────────────────────────────────────────
 
 export const marketplaceApi = {
-  /** Obtém a URL de autorização OAuth do ML/Shopee. Exige login. */
   getAuthUrl(marketplace: string): Promise<AuthUrlDto> {
     const m = encodeURIComponent(marketplace);
     return request<unknown>(`/integrations/${m}`).then(parseAuthUrlDto);
   },
 
-  /**
-   * Envia o code OAuth ao backend para trocar por access_token + refresh_token
-   * e persistir a integração no Supabase.
-   */
   handleCallback(marketplace: string, code: string, shopId?: string, state?: string): Promise<CallbackResultDto> {
     const m = encodeURIComponent(marketplace);
     return request<CallbackResultDto>(
@@ -185,17 +175,14 @@ export const marketplaceApi = {
     );
   },
 
-  /** Lista todas as integrações ativas do usuário logado. */
   listIntegrations(): Promise<IntegrationDto[]> {
     return request<unknown>('/integrations').then(ensureJsonArray<IntegrationDto>);
   },
 
-  /** Desconecta (desativa) uma integração. */
   disconnect(id: string): Promise<{ message: string }> {
     return request<{ message: string }>(`/integrations/${id}`, { method: 'DELETE' });
   },
 
-  /** Dispara sincronização de pedidos e pagamentos para uma integração. */
   triggerSync(id: string): Promise<SyncResultDto> {
     return request<SyncResultDto>(`/integrations/${id}/sync`, { method: 'POST' }).then((raw) => {
       if (!raw || typeof raw !== 'object') {
@@ -214,13 +201,11 @@ export const marketplaceApi = {
     });
   },
 
-  /** Lista pedidos (todos ou filtrados por integração). */
   getOrders(integrationId?: string): Promise<OrderDto[]> {
     const path = integrationId ? `/orders/${integrationId}` : '/orders';
     return request<unknown>(path).then(ensureJsonArray<OrderDto>);
   },
 
-  /** Resumo financeiro do período. */
   getFinanceSummary(from?: Date, to?: Date): Promise<FinanceSummaryDto> {
     const params = new URLSearchParams();
     if (from) params.set('from', from.toISOString());
@@ -234,14 +219,12 @@ export const marketplaceApi = {
 
 const OAUTH_STATE_PREFIX = 'oauth_state_';
 
-/** Persiste o marketplace associado ao state OAuth antes do redirect. */
 export function storeOAuthState(state: string, marketplace: string): string{
     localStorage.setItem(`${OAUTH_STATE_PREFIX}${state}`, marketplace);
     return marketplace;
   }
 
-/** Recupera (e remove) o marketplace associado ao state OAuth após o redirect. */
-export function consumeOAuthState(state: string): string {
+export function consumeOAuthState(state: string): string | null {
   const key   = `${OAUTH_STATE_PREFIX}${state}`;
   const value = localStorage.getItem(key);
   if (value) localStorage.removeItem(key);

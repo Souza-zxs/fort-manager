@@ -4,22 +4,29 @@ import { createMercadoLivreMarketplaceAdapter } from './mercadolivre-marketplace
 import { MarketplaceName } from '../types/marketplace.types';
 import { BadRequestError } from '../shared/errors/errors';
 
-const registry = new Map<MarketplaceName, MarketplaceAdapter>();
+// Cache apenas para adapters SEM estado de autenticação
+const statelessAdapters = new Map<MarketplaceName, MarketplaceAdapter>();
 
-export function getAdapter(marketplace: MarketplaceName): MarketplaceAdapter {
-  const cached = registry.get(marketplace);
-  if (cached) return cached;
-
-  let adapter: MarketplaceAdapter;
-
+export function getAdapter(
+  marketplace: MarketplaceName,
+  credentials?: { clientId: string; clientSecret: string } // Para adapters stateful como ML
+): MarketplaceAdapter {
+ 
   if (marketplace === 'shopee') {
-    adapter = createShopeeAdapter();
-  } else if (marketplace === 'mercadolivre') {
-    adapter = createMercadoLivreMarketplaceAdapter();
-  } else {
-    throw new BadRequestError(`Unsupported marketplace: ${marketplace}`);
+    let adapter = statelessAdapters.get('shopee');
+    if (!adapter) {
+      adapter = createShopeeAdapter();
+      statelessAdapters.set('shopee', adapter);
+    }
+    return adapter;
   }
 
-  registry.set(marketplace, adapter);
-  return adapter;
+  if (marketplace === 'mercadolivre') {
+    if (!credentials) {
+      throw new BadRequestError('Mercado Livre requires credentials');
+    }
+    return createMercadoLivreMarketplaceAdapter();
+  }
+
+  throw new BadRequestError(`Unsupported marketplace: ${marketplace}`);
 }

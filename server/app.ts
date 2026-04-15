@@ -49,8 +49,8 @@ app.use(
 
 app.use(express.json());
 
-app.use('/api/marketplaces', createMarketplaceRouter());
 app.use('/api/marketplaces/mercadolivre', meliRoutes);
+app.use('/api/marketplaces', createMarketplaceRouter());
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

@@ -8,18 +8,16 @@ import { AuthenticatedResponse } from '../shared/middleware/auth.middleware';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
-  headers: {
-    authorization?: string;
+  headers: { 
+    authorization?: string; 
   };
-  params: {
-    marketplace: string;
-    id: string;
-  };
+  params: Record<string, string>;
   query: {
-    code?: string;
-    shop_id?: string;
-  };
+     code?: string;
+      shop_id?: string; 
+    };
 }
+
 
 function assertMarketplace(value: string): asserts value is MarketplaceName {
   if (value !== 'shopee' && value !== 'mercadolivre') {
