@@ -1,7 +1,7 @@
 ﻿import axios, { AxiosInstance } from 'axios';
 import crypto from 'crypto';
 import { MarketplaceAdapter } from './marketplace.adapter.js';
-import { MarketplaceAuthorizationUrl, MarketplaceTokenSet, MarketplaceOrder, MarketplacePayment, MarketplaceOrdersParams,MarketplacePaymentsParams, MarketplacePaginatedResult,MarketplaceName, OrderStatus,PaymentStatus,} from '../types/marketplace.types.js';
+import { MarketplaceAuthorizationUrl, MarketplaceTokenSet, MarketplaceOrder, MarketplacePayment, MarketplaceOrdersParams,MarketplacePaymentsParams, MarketplacePaginatedResult,MarketplaceName, OrderStatus,PaymentStatus, MarketplaceProduct,} from '../types/marketplace.types.js';
 import { ShopeeApiResponse, ShopeeTokenResponse, ShopeeOrderListResponse, ShopeeOrderDetailResponse, ShopeeOrderDetail, ShopeeTransactionListResponse, ShopeeTransaction,} from '../types/shopee-api.types.js';
 import { MarketplaceApiError } from '../shared/errors/errors.js';
 import { secondsFromNow, unixToDate, generateState } from '../shared/utils/index.js';
@@ -29,6 +29,9 @@ export class ShopeeAdapter implements MarketplaceAdapter {
       headers: { 'Content-Type': 'application/json' },
       timeout: 30000,
     });
+  }
+  getProducts(accessToken: string, shopId: string): Promise<MarketplaceProduct[]> {
+    throw new Error('Method not implemented.');
   }
 
   getAuthorizationUrl(state: string): MarketplaceAuthorizationUrl {

@@ -287,36 +287,20 @@ export class ProductSyncService {
   const adapter = getAdapter(integration.marketplace as any);
 
   try {
-    const allIds: string[] = [];
-    let offset = 0;
-    const limit = 50;
-
-    while (true) {
-      const result = await (adapter as any).searchItems(
-        Number(integration.shopId), { offset, limit }
-      );
-      allIds.push(...result.results);
-      if (allIds.length >= result.paging.total) break;
-      offset += limit;
-    }
-
-    const products = [];
-    for (let i = 0; i < allIds.length; i += 20) {
-      const batch = await (adapter as any).getItemsBatch(allIds.slice(i, i + 20));
-      products.push(...batch);
-    }
+    // usa getProducts que já existe no MercadoLivreMarketplaceAdapter
+    const products = await adapter.getProducts(accessToken, integration.shopId);
 
     await this.productsRepo.upsertMany(
-      products.map((item: any) => ({
+      products.map((item) => ({
         integrationId,
-        externalItemId:    item.id,
+        externalItemId:    item.externalItemId,
         title:             item.title,
-        sku:               item.seller_custom_field ?? '',
-        categoryId:        item.category_id,
-        categoryName:      '',
+        sku:               item.sku,
+        categoryId:        item.categoryId,
+        categoryName:      item.categoryName,
         price:             item.price,
-        availableQuantity: item.available_quantity,
-        soldQuantity:      item.sold_quantity,
+        availableQuantity: item.availableQuantity,
+        soldQuantity:      item.soldQuantity,
         status:            item.status,
         thumbnail:         item.thumbnail,
         permalink:         item.permalink,
