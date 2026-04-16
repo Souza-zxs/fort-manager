@@ -1,4 +1,4 @@
-  import axios, { AxiosError, type AxiosRequestConfig } from 'axios';
+  import axios, { AxiosError, AxiosHeaders, type AxiosRequestConfig } from 'axios';
   import { supabase } from './supabase';
 
   const http = axios.create({
@@ -6,6 +6,25 @@
     timeout: 30_000, // 30s - suficiente para cold start do Render + chamada externa
     headers: { 'Content-Type': 'application/json' },
   });
+
+http.interceptors.request.use(async (config) => {
+  try {
+    const token = await getToken();
+
+    if (token) {
+      if (!config.headers) {
+        config.headers = new AxiosHeaders();
+      }
+
+      config.headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    return config;
+  } catch (error) {
+    console.error('Erro ao obter token:', error);
+    return config;
+  }
+});
 
   // ── Erro tipado ────────────────────────────────────────────────────────────────
 
