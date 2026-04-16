@@ -1,6 +1,6 @@
 ﻿import { Request, Response, NextFunction } from 'express';
-import { createClient } from '@supabase/supabase-js';
 import { UnauthorizedError } from '../errors/errors.js';
+import { getSupabaseClient } from '../../infra/database/supabase.js';
 
 export interface AuthenticatedRequest extends Request {
   userId: string;
@@ -31,16 +31,7 @@ export async function authMiddleware(
     }
 
     const token = authHeader.slice(7);
-
-    const supabaseUrl =
-      process.env.SUPABASE_URL ??
-      process.env.VITE_SUPABASE_URL ?? '';
-
-    const supabaseAnonKey =
-      process.env.SUPABASE_ANON_KEY ??
-      process.env.VITE_SUPABASE_ANON_KEY ?? '';
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase.auth.getUser(token);
 
     if (error || !data.user) {
@@ -53,5 +44,3 @@ export async function authMiddleware(
     next(error);
   }
 }
-
-
