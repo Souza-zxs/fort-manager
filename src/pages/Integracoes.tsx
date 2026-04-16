@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   Link2, RefreshCw, Settings, CheckCircle2, XCircle,
-  ArrowUpDown, ShoppingCart, Clock, Plus, Activity, Loader2, AlertCircle,
+  ArrowUpDown, ShoppingCart, Clock, Plus, Activity, Loader2, AlertCircle,Package
 } from "lucide-react";
 import shopeeLogo from "@/assets/shopee-logo.png";
 import mercadoLivreLogo from "@/assets/mercadolivre-logo.png";
@@ -20,6 +20,9 @@ import {
   marketplaceLabel,
 } from "@/hooks/useMarketplaces";
 import type { IntegrationDto } from "@/lib/marketplaceApi";
+import { marketplaceApi } from "@/lib/marketplaceApi";
+import { useToast } from "@/hooks/use-toast";
+
 
 // ── Configuração estática de cada marketplace ─────────────────────────────────
 
@@ -56,8 +59,8 @@ const Integracoes = () => {
   const navigate = useNavigate();
 
   // Sincronização automática (estado local por enquanto)
-  const [autoSync, setAutoSync] = useState<Record<string, boolean>>({});
-
+const [autoSync, setAutoSync] = useState<Record<string, boolean>>({});
+const [syncingProducts, setSyncingProducts] = useState<string | null>(null);
   // ── Queries / Mutations ───────────────────────────────────────────────────
 
   const { data: integrationsRaw, isLoading, error } = useIntegrations();
@@ -65,7 +68,9 @@ const Integracoes = () => {
   const startOAuth  = useStartOAuth();
   const disconnect  = useDisconnect();
   const triggerSync = useTriggerSync();
+  const { toast } = useToast();
 
+  
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   function findIntegration(marketplaceId: string): IntegrationDto | undefined {
@@ -251,35 +256,54 @@ const Integracoes = () => {
                           </Button>
                         </div>
                       )}
-
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1"
-                          disabled={isSyncing}
-                          onClick={() => handleSyncNow(integration)}
-                        >
-                          {isSyncing ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <RefreshCw size={14} />
-                          )}
-                          {isSyncing ? "Sincronizando…" : "Sincronizar"}
-                        </Button>
-                        <Button size="sm" variant="outline" className="flex-1">
-                          <Settings size={14} />
-                          Configurar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          disabled={disconnect.isPending}
-                          onClick={() => handleDisconnect(integration)}
-                        >
-                          Desconectar
-                        </Button>
-                      </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1"
+                            disabled={isSyncing}
+                            onClick={() => handleSyncNow(integration)}
+                          >
+                            {isSyncing ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <RefreshCw size={14} />
+                            )}
+                            {isSyncing ? "Sincronizando…" : "Sincronizar Pedidos"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1"
+                            disabled={syncingProducts === integration.id}
+                            onClick={() => {
+                              setSyncingProducts(integration.id);
+                              marketplaceApi.syncProducts(integration.id)
+                                .then(() => toast({ title: "Produtos sincronizados!" }))
+                                .catch(() => toast({ title: "Erro ao sincronizar produtos", variant: "destructive" }))
+                                .finally(() => setSyncingProducts(null));
+                            }}
+                          >
+                            {syncingProducts === integration.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Package size={14} />
+                            )}
+                            {syncingProducts === integration.id ? "Sincronizando…" : "Sincronizar Produtos"}
+                          </Button>
+                          <Button size="sm" variant="outline" className="flex-1">
+                            <Settings size={14} />
+                            Configurar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={disconnect.isPending}
+                            onClick={() => handleDisconnect(integration)}
+                          >
+                            Desconectar
+                          </Button>
+                        </div>
                     </div>
                   </>
                 ) : (
