@@ -293,6 +293,7 @@ export class ProductSyncService {
     await this.productsRepo.upsertMany(
       products.map((item) => ({
         integrationId,
+        userId,
         externalItemId:    item.externalItemId,
         title:             item.title,
         sku:               item.sku,
