@@ -1,4 +1,4 @@
-  import { useState } from "react";
+  import { useEffect, useState } from "react";
   import { Plus, Search, Edit2, Trash2, Eye, Filter, MoreVertical } from "lucide-react";
   import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
   import { Input } from "@/components/ui/input";
@@ -7,37 +7,18 @@
   import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
   import { Button } from "@/components/ui/button";
   import { useToast } from "@/hooks/use-toast";
+  import { marketplaceApi } from "@/lib/marketplaceApi";
 
-  import imgChavesAllen from "@/assets/products/chaves-allen.jpg";
-  import imgFuradeira from "@/assets/products/furadeira.jpg";
-  import imgParafusos from "@/assets/products/parafusos-kit.jpg";
-  import imgSerraCircular from "@/assets/products/serra-circular.jpg";
-  import imgNivelLaser from "@/assets/products/nivel-laser.jpg";
-  import imgAlicate from "@/assets/products/alicate.jpg";
-  import imgParafusadeira from "@/assets/products/parafusadeira.jpg";
-  import imgTrena from "@/assets/products/trena.jpg";
-
-  interface Product {
-    id: string;
-    name: string;
-    sku: string;
-    category: string;
-    price: number;
-    stock: number;
-    status: "Ativo" | "Inativo" | "Sem Estoque";
-    image?: string;
-  }
-
-  const initialProducts: Product[] = [
-    { id: "1", name: "Jogo de Chaves Allen 9pcs", sku: "FT-AL-001", category: "Chaves", price: 29.90, stock: 150, status: "Ativo", image: imgChavesAllen },
-    { id: "2", name: "Furadeira de Impacto 750W", sku: "FT-FU-002", category: "Furadeiras", price: 289.90, stock: 42, status: "Ativo", image: imgFuradeira },
-    { id: "3", name: "Kit Parafusos Sextavados 200pcs", sku: "FT-PF-003", category: "Parafusos", price: 49.90, stock: 380, status: "Ativo", image: imgParafusos },
-    { id: "4", name: "Serra Circular 7¼\" 1400W", sku: "FT-SC-004", category: "Serras", price: 459.90, stock: 18, status: "Ativo", image: imgSerraCircular },
-    { id: "5", name: "Nível a Laser 15m", sku: "FT-NL-005", category: "Medição", price: 189.90, stock: 0, status: "Sem Estoque", image: imgNivelLaser },
-    { id: "6", name: "Alicate Universal 8\"", sku: "FT-AP-006", category: "Alicates", price: 34.90, stock: 220, status: "Ativo", image: imgAlicate },
-    { id: "7", name: "Parafusadeira 12V Bivolt", sku: "FT-PD-007", category: "Parafusadeiras", price: 199.90, stock: 65, status: "Ativo", image: imgParafusadeira },
-    { id: "8", name: "Trena Magnética 5m", sku: "FT-TR-008", category: "Medição", price: 19.90, stock: 0, status: "Sem Estoque", image: imgTrena },
-  ];
+interface Product {
+  id: string;
+  name: string; 
+  sku: string;
+  category: string; 
+  price: number;
+  stock: number;     
+  status: "Ativo" | "Inativo" | "Sem Estoque";
+  image?: string;    
+}
 
   const categories = ["Chaves", "Furadeiras", "Parafusos", "Serras", "Medição", "Alicates", "Parafusadeiras", "Brocas", "Discos"];
 
@@ -48,12 +29,30 @@
   };
 
   const Produtos = () => {
-    const [products, setProducts] = useState<Product[]>(initialProducts);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [filterCategory, setFilterCategory] = useState<string>("all");
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const { toast } = useToast();
+
+    useEffect(() => {
+      marketplaceApi.listProducts()
+        .then(data => setProducts(data.map(p => ({
+          id: p.id,
+          name: p.title,
+          sku: p.sku,
+          category: p.categoryName || '—',
+          price: p.price,
+          stock: p.availableQuantity,
+          status: p.status === 'active' ? 'Ativo' : p.availableQuantity === 0 ? 'Sem Estoque' : 'Inativo',
+          image: p.thumbnail,
+        }))))
+        .catch(() => toast({ title: "Erro ao carregar produtos", variant: "destructive" }))
+        .finally(() => setLoading(false));
+    }, []);
+
 
     const [form, setForm] = useState({ name: "", sku: "", category: "", price: "", stock: "", status: "Ativo" as Product["status"] });
 
@@ -74,6 +73,7 @@
       setForm({ name: p.name, sku: p.sku, category: p.category, price: p.price.toString(), stock: p.stock.toString(), status: p.status });
       setDialogOpen(true);
     };
+
 
     const handleSave = () => {
       if (!form.name || !form.sku || !form.category || !form.price) {
@@ -202,7 +202,9 @@
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p) => (
+              {loading ? (
+                <tr><td colSpan={7} className="p-8 text-center">Carregando...</td></tr>
+              ) : filtered.map((p) => (
                 <tr key={p.id} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
                   <td className="p-4">
                     <div className="flex items-center gap-3">
@@ -239,7 +241,7 @@
               ))}
               {filtered.length === 0 && (
                 <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">Nenhum produto encontrado</td></tr>
-              )}
+              )}  
             </tbody>
           </table>
         </div>

@@ -152,6 +152,30 @@ export interface OrderDto {
   marketplace: string;
 }
 
+// ── DTOs ── (adiciona junto aos outros)
+export interface ProductDto {
+  id: string;
+  integrationId: string;
+  externalItemId: string;
+  title: string;
+  sku: string;
+  categoryName: string;
+  price: number;
+  availableQuantity: number;
+  soldQuantity: number;
+  status: string;
+  thumbnail: string;
+  permalink: string;
+  syncedAt: string;
+}
+
+export interface ProductSyncResultDto {
+  integrationId: string;
+  productsSynced: number;
+  errors: string[];
+  syncedAt: string;
+}
+
 // ── API pública ────────────────────────────────────────────────────────────────
 
 export const marketplaceApi = {
@@ -212,6 +236,17 @@ export const marketplaceApi = {
     if (to)   params.set('to',   to.toISOString());
     const q = params.toString() ? `?${params.toString()}` : '';
     return request<FinanceSummaryDto>(`/finance/summary${q}`);
+  },
+    listProducts(): Promise<ProductDto[]> {
+    return request<{ products: ProductDto[] }>('/products')
+      .then(res => ensureJsonArray<ProductDto>(res.products));
+  },
+
+  syncProducts(integrationId: string): Promise<ProductSyncResultDto> {
+    return request<ProductSyncResultDto>(
+      `/products/sync/${integrationId}`,
+      { method: 'POST' },
+    );
   },
 } as const;
 
