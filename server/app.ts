@@ -12,6 +12,20 @@ const repoRoot = path.resolve(__dirname, '..');
 dotenv.config({ path: path.join(repoRoot, '.env.local') });
 dotenv.config({ path: path.join(repoRoot, '.env') });
 
+// Validação de variáveis críticas na inicialização
+const requiredEnvVars = [
+  'SUPABASE_URL',
+  'SUPABASE_ANON_KEY',
+  'MELI_APP_ID',
+  'MELI_CLIENT_SECRET',
+  'MELI_REDIRECT_URI',
+];
+for (const varName of requiredEnvVars) {
+  if (!process.env[varName]) {
+    console.warn(`⚠️  Variável de ambiente ausente: ${varName}`);
+  }
+}
+
 const app = express();
 
 const extraOrigins = (process.env.CORS_ORIGINS ?? '')

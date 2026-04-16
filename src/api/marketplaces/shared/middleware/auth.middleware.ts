@@ -15,7 +15,6 @@ export interface AuthenticatedRequest extends Request {
     code?: string;
     shop_id?: string;
   };
-
 }
 
 export type AuthenticatedResponse = Response;
@@ -26,14 +25,20 @@ export async function authMiddleware(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const authHeader =(<AuthenticatedRequest> req).headers.authorization;
+    const authHeader = (req as AuthenticatedRequest).headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
       throw new UnauthorizedError('Missing or invalid authorization header');
     }
 
     const token = authHeader.slice(7);
-    const supabaseUrl = process.env.SUPABASE_URL ?? '';
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? '';
+
+    const supabaseUrl =
+      process.env.SUPABASE_URL ??
+      process.env.VITE_SUPABASE_URL ?? '';
+
+    const supabaseAnonKey =
+      process.env.SUPABASE_ANON_KEY ??
+      process.env.VITE_SUPABASE_ANON_KEY ?? '';
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
     const { data, error } = await supabase.auth.getUser(token);
