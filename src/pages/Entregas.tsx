@@ -1,11 +1,10 @@
-import { useState } from "react";
-import { Search, MapPin, Package, Clock, CheckCircle2, Truck, XCircle, Eye, Filter, Copy } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Package, Truck, MapPin, CheckCircle2, XCircle, Eye, Filter, Copy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { getProductImage } from "@/lib/productImages";
+import { marketplaceApi, type OrderDto } from "@/lib/marketplaceApi";
 
 interface Delivery {
   id: string;
@@ -21,37 +20,61 @@ interface Delivery {
   carrier: string;
 }
 
-const deliveries: Delivery[] = [
-  { id: "1", orderId: "#FT-2847", customer: "João Silva", address: "Rua das Flores, 123", city: "São Paulo - SP", product: "Jogo de Chaves Allen", tracking: "BR1234567890", status: "Em Trânsito", date: "04/03/2026", estimatedDelivery: "08/03/2026", carrier: "Shopee Express" },
-  { id: "2", orderId: "#FT-2846", customer: "Maria Santos", address: "Av. Brasil, 456", city: "Rio de Janeiro - RJ", product: "Furadeira de Impacto", tracking: "BR0987654321", status: "Preparando", date: "04/03/2026", estimatedDelivery: "10/03/2026", carrier: "Correios" },
-  { id: "3", orderId: "#FT-2845", customer: "Carlos Oliveira", address: "Rua XV, 789", city: "Curitiba - PR", product: "Kit Parafusos Sextavados", tracking: "BR1122334455", status: "Entregue", date: "01/03/2026", estimatedDelivery: "03/03/2026", carrier: "Shopee Express" },
-  { id: "4", orderId: "#FT-2844", customer: "Ana Costa", address: "Rua Augusta, 321", city: "São Paulo - SP", product: "Serra Circular 7¼\"", tracking: "BR5566778899", status: "Saiu para Entrega", date: "02/03/2026", estimatedDelivery: "04/03/2026", carrier: "Jadlog" },
-  { id: "5", orderId: "#FT-2843", customer: "Pedro Souza", address: "Av. Paulista, 1000", city: "São Paulo - SP", product: "Nível a Laser", tracking: "BR9988776655", status: "Entregue", date: "28/02/2026", estimatedDelivery: "02/03/2026", carrier: "Correios" },
-  { id: "6", orderId: "#FT-2842", customer: "Lucia Ferreira", address: "Rua Bahia, 55", city: "Belo Horizonte - MG", product: "Alicate Universal 8\"", tracking: "BR4433221100", status: "Coletado", date: "03/03/2026", estimatedDelivery: "07/03/2026", carrier: "Shopee Express" },
-  { id: "7", orderId: "#FT-2841", customer: "Roberto Lima", address: "Av. Independência, 88", city: "Porto Alegre - RS", product: "Parafusadeira 12V", tracking: "BR6677889900", status: "Devolvido", date: "25/02/2026", estimatedDelivery: "01/03/2026", carrier: "Correios" },
-];
-
 const statusConfig: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
-  "Preparando": { icon: Package, color: "text-warning", bg: "bg-warning/15" },
-  "Coletado": { icon: Package, color: "text-accent", bg: "bg-accent/15" },
-  "Em Trânsito": { icon: Truck, color: "text-primary", bg: "bg-primary/15" },
-  "Saiu para Entrega": { icon: MapPin, color: "text-accent", bg: "bg-accent/15" },
-  "Entregue": { icon: CheckCircle2, color: "text-success", bg: "bg-success/15" },
-  "Devolvido": { icon: XCircle, color: "text-destructive", bg: "bg-destructive/15" },
+  "Preparando":        { icon: Package,      color: "text-warning",     bg: "bg-warning/15" },
+  "Coletado":          { icon: Package,      color: "text-accent",      bg: "bg-accent/15" },
+  "Em Trânsito":       { icon: Truck,        color: "text-primary",     bg: "bg-primary/15" },
+  "Saiu para Entrega": { icon: MapPin,       color: "text-accent",      bg: "bg-accent/15" },
+  "Entregue":          { icon: CheckCircle2, color: "text-success",     bg: "bg-success/15" },
+  "Devolvido":         { icon: XCircle,      color: "text-destructive", bg: "bg-destructive/15" },
 };
 
 const allStatuses = ["Preparando", "Coletado", "Em Trânsito", "Saiu para Entrega", "Entregue", "Devolvido"];
+const steps       = ["Preparando", "Coletado", "Em Trânsito", "Saiu para Entrega", "Entregue"];
 
-const steps = ["Preparando", "Coletado", "Em Trânsito", "Saiu para Entrega", "Entregue"];
+function mapOrderToDelivery(order: OrderDto): Delivery {
+  const statusMap: Record<string, Delivery["status"]> = {
+    COMPLETED:     "Entregue",
+    CANCELLED:     "Devolvido",
+    READY_TO_SHIP: "Saiu para Entrega",
+    UNPAID:        "Preparando",
+    PAID:          "Coletado",
+    SHIPPED:       "Em Trânsito",
+  };
+
+  return {
+    id:                order.id,
+    orderId:           `#${order.externalOrderId.toString().slice(-6)}`,
+    customer:          order.buyerUsername ?? "—",
+    address:           "—",
+    city:              "—",
+    product:           "—",
+    tracking:          order.trackingNumber ?? "—",
+    status:            statusMap[order.status] ?? "Preparando",
+    date:              new Date(order.orderCreatedAt).toLocaleDateString("pt-BR"),
+    estimatedDelivery: "—",
+    carrier:           order.shippingCarrier ?? "—",
+  };
+}
 
 const Entregas = () => {
-  const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [deliveries, setDeliveries]         = useState<Delivery[]>([]);
+  const [loading, setLoading]               = useState(true);
+  const [search, setSearch]                 = useState("");
+  const [filterStatus, setFilterStatus]     = useState<string>("all");
   const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
   const { toast } = useToast();
 
+  useEffect(() => {
+    marketplaceApi.getOrders()
+      .then(orders => setDeliveries(orders.map(mapOrderToDelivery)))
+      .catch(() => toast({ title: "Erro ao carregar entregas", variant: "destructive" }))
+      .finally(() => setLoading(false));
+  }, []);
+
   const filtered = deliveries.filter((d) => {
-    const matchSearch = d.customer.toLowerCase().includes(search.toLowerCase()) || d.tracking.toLowerCase().includes(search.toLowerCase()) || d.orderId.toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase();
+    const matchSearch = d.customer.toLowerCase().includes(q) || d.tracking.toLowerCase().includes(q) || d.orderId.toLowerCase().includes(q);
     const matchStatus = filterStatus === "all" || d.status === filterStatus;
     return matchSearch && matchStatus;
   });
@@ -77,12 +100,14 @@ const Entregas = () => {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {allStatuses.map((status) => {
           const config = statusConfig[status];
-          const count = deliveries.filter((d) => d.status === status).length;
+          const count  = deliveries.filter((d) => d.status === status).length;
           return (
             <button
               key={status}
               onClick={() => setFilterStatus(filterStatus === status ? "all" : status)}
-              className={`gradient-card rounded-lg border p-3 text-center transition-all ${filterStatus === status ? "border-primary glow-red" : "border-border hover:border-primary/30"}`}
+              className={`gradient-card rounded-lg border p-3 text-center transition-all ${
+                filterStatus === status ? "border-primary glow-red" : "border-border hover:border-primary/30"
+              }`}
             >
               <config.icon size={20} className={`${config.color} mx-auto mb-1`} />
               <p className="font-display text-xl font-bold">{count}</p>
@@ -119,27 +144,35 @@ const Entregas = () => {
               <th className="text-left p-4 font-medium">Rastreio</th>
               <th className="text-left p-4 font-medium">Transportadora</th>
               <th className="text-left p-4 font-medium">Status</th>
-              <th className="text-left p-4 font-medium">Previsão</th>
+              <th className="text-left p-4 font-medium">Data</th>
               <th className="text-right p-4 font-medium">Ações</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((d) => {
+            {loading ? (
+              <tr>
+                <td colSpan={8} className="p-8 text-center text-muted-foreground text-sm">
+                  Carregando entregas...
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="p-8 text-center text-muted-foreground text-sm">
+                  Nenhuma entrega encontrada.
+                </td>
+              </tr>
+            ) : filtered.map((d) => {
               const config = statusConfig[d.status];
               return (
                 <tr key={d.id} className="border-b border-border/50 hover:bg-secondary/50 transition-colors">
                   <td className="p-4 font-mono text-sm text-primary">{d.orderId}</td>
                   <td className="p-4 text-sm">{d.customer}</td>
+                  <td className="p-4 text-sm text-muted-foreground max-w-[160px] truncate">{d.product}</td>
                   <td className="p-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-md overflow-hidden bg-secondary flex-shrink-0">
-                        {(() => { const img = getProductImage(d.product); return img ? <img src={img} alt={d.product} className="w-full h-full object-cover" /> : null; })()}
-                      </div>
-                      <span className="text-sm text-muted-foreground">{d.product}</span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <button onClick={() => copyTracking(d.tracking)} className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    <button
+                      onClick={() => copyTracking(d.tracking)}
+                      className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
                       {d.tracking} <Copy size={12} />
                     </button>
                   </td>
@@ -150,9 +183,12 @@ const Entregas = () => {
                       {d.status}
                     </span>
                   </td>
-                  <td className="p-4 text-sm text-muted-foreground">{d.estimatedDelivery}</td>
+                  <td className="p-4 text-sm text-muted-foreground">{d.date}</td>
                   <td className="p-4 text-right">
-                    <button onClick={() => setSelectedDelivery(d)} className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
+                    <button
+                      onClick={() => setSelectedDelivery(d)}
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                    >
                       <Eye size={15} />
                     </button>
                   </td>
@@ -166,51 +202,101 @@ const Entregas = () => {
       {/* Detail dialog */}
       <Dialog open={!!selectedDelivery} onOpenChange={() => setSelectedDelivery(null)}>
         <DialogContent className="sm:max-w-lg">
-          {selectedDelivery && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="font-display text-xl">Detalhes da Entrega {selectedDelivery.orderId}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-5 mt-2">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-muted-foreground">Cliente:</span><p className="font-medium">{selectedDelivery.customer}</p></div>
-                  <div><span className="text-muted-foreground">Produto:</span><p className="font-medium">{selectedDelivery.product}</p></div>
-                  <div><span className="text-muted-foreground">Endereço:</span><p className="font-medium">{selectedDelivery.address}</p></div>
-                  <div><span className="text-muted-foreground">Cidade:</span><p className="font-medium">{selectedDelivery.city}</p></div>
-                  <div><span className="text-muted-foreground">Transportadora:</span><p className="font-medium">{selectedDelivery.carrier}</p></div>
-                  <div><span className="text-muted-foreground">Rastreio:</span><p className="font-medium font-mono text-xs">{selectedDelivery.tracking}</p></div>
-                </div>
-
-                {/* Timeline */}
-                <div>
-                  <p className="text-sm font-medium mb-3">Progresso da Entrega</p>
-                  <div className="flex items-center gap-1">
-                    {steps.map((step, i) => {
-                      const currentStep = getStepIndex(selectedDelivery.status);
-                      const isCompleted = i <= currentStep;
-                      const isCurrent = i === currentStep;
-                      return (
-                        <div key={step} className="flex-1 flex flex-col items-center">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mb-1 transition-all ${
-                            isCompleted ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                          } ${isCurrent ? "ring-2 ring-primary ring-offset-2 ring-offset-card" : ""}`}>
-                            {i + 1}
-                          </div>
-                          <p className={`text-[9px] text-center leading-tight ${isCompleted ? "text-foreground" : "text-muted-foreground"}`}>{step}</p>
-                          {i < steps.length - 1 && (
-                            <div className={`absolute h-0.5 w-full ${isCompleted ? "bg-primary" : "bg-secondary"}`} />
-                          )}
-                        </div>
-                      );
-                    })}
+          {selectedDelivery && (() => {
+            const config   = statusConfig[selectedDelivery.status];
+            const stepIdx  = getStepIndex(selectedDelivery.status);
+            return (
+              <>
+                <DialogHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Pedido</p>
+                      <DialogTitle className="font-display text-xl mt-0.5">{selectedDelivery.orderId}</DialogTitle>
+                    </div>
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${config.bg} ${config.color}`}>
+                      <config.icon size={13} />
+                      {selectedDelivery.status}
+                    </span>
                   </div>
-                  {selectedDelivery.status === "Devolvido" && (
-                    <p className="text-destructive text-xs mt-2 text-center font-medium">⚠ Este pedido foi devolvido</p>
+                </DialogHeader>
+
+                <div className="space-y-3 mt-1">
+                  {/* Meta grid */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "Cliente",        value: selectedDelivery.customer },
+                      { label: "Transportadora", value: selectedDelivery.carrier },
+                      { label: "Previsão",       value: selectedDelivery.estimatedDelivery },
+                      { label: "Data do pedido", value: selectedDelivery.date },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="bg-secondary/60 rounded-lg px-3 py-2.5">
+                        <p className="text-[11px] text-muted-foreground mb-0.5">{label}</p>
+                        <p className="text-sm font-medium">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="bg-secondary/60 rounded-lg px-3 py-2.5">
+                    <p className="text-[11px] text-muted-foreground mb-0.5">Endereço</p>
+                    <p className="text-sm font-medium">{selectedDelivery.address}{selectedDelivery.city !== "—" ? ` — ${selectedDelivery.city}` : ""}</p>
+                  </div>
+
+                  <div className="bg-secondary/60 rounded-lg px-3 py-2.5">
+                    <p className="text-[11px] text-muted-foreground mb-0.5">Produto</p>
+                    <p className="text-sm font-medium">{selectedDelivery.product}</p>
+                  </div>
+
+                  {/* Tracking */}
+                  <div className="bg-secondary/60 rounded-lg px-3 py-2.5 flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] text-muted-foreground mb-0.5">Código de rastreio</p>
+                      <p className="font-mono text-sm font-medium">{selectedDelivery.tracking}</p>
+                    </div>
+                    <button
+                      onClick={() => copyTracking(selectedDelivery.tracking)}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-md px-2.5 py-1.5 transition-colors bg-background"
+                    >
+                      <Copy size={12} /> Copiar
+                    </button>
+                  </div>
+
+                  {/* Timeline */}
+                  {selectedDelivery.status !== "Devolvido" ? (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-3">Progresso da entrega</p>
+                      <div className="flex items-start">
+                        {steps.map((step, i) => {
+                          const done      = i <= stepIdx;
+                          const isCurrent = i === stepIdx;
+                          const isLast    = i === steps.length - 1;
+                          return (
+                            <div key={step} className="flex-1 flex flex-col items-center relative">
+                              {!isLast && (
+                                <div className={`absolute top-[13px] left-1/2 w-full h-px ${i < stepIdx ? "bg-primary" : "bg-border"}`} />
+                              )}
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-medium z-10 relative transition-all
+                                ${done ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}
+                                ${isCurrent ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}
+                              `}>
+                                {i < stepIdx ? <CheckCircle2 size={13} /> : i + 1}
+                              </div>
+                              <p className={`text-[9px] text-center mt-1.5 leading-tight max-w-[52px] ${done ? "text-foreground" : "text-muted-foreground"}`}>
+                                {step}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 bg-destructive/10 text-destructive rounded-lg px-3 py-2.5 text-sm font-medium">
+                      <XCircle size={15} /> Este pedido foi devolvido
+                    </div>
                   )}
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
