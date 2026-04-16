@@ -21,18 +21,20 @@
 
   // ── Helpers internos ──────────────────────────────────────────────────────────
   async function getToken(): Promise<string> {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (error || !session?.access_token) {
-      const { data: refreshed } = await supabase.auth.refreshSession();
-      if (!refreshed.session?.access_token) {
-        throw new ApiError('Sessão expirada. Faça login para continuar.', 401);
-      }
-      return refreshed.session.access_token;
-    }
+  const { data: { session }, error } = await supabase.auth.getSession();
 
-    return session.access_token;
+  console.log('session:', session); // 👈 importante
+
+  if (error || !session?.access_token) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    if (!refreshed.session?.access_token) {
+      throw new ApiError('Sessão expirada. Faça login para continuar.', 401);
+    }
+    return refreshed.session.access_token;
   }
+
+  return session.access_token;
+}
   function ensureJsonArray<T>(value: unknown): T[] {
     return Array.isArray(value) ? (value as T[]) : [];
   }
