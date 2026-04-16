@@ -39,3 +39,5 @@ export interface MarketplaceAdapter {
     params: MarketplacePaymentsParams,
   ): Promise<MarketplacePayment[]>;
 }
+
+

@@ -1,15 +1,15 @@
 import { Router } from 'express';
-import { getSupabaseClient } from './infra/database/supabase';
-import { IntegrationRepository } from './repositories/integration.repository';
-import { OrdersRepository } from './repositories/orders.repository';
-import { PaymentsRepository } from './repositories/payments.repository';
-import { SyncStateRepository } from './repositories/sync-state.repository';
-import { MarketplaceAuthService } from './services/auth.service';
-import { MarketplaceSyncService } from './services/sync.service';
-import { IntegrationController } from './controllers/integration.controller';
-import { OrdersController } from './controllers/orders.controller';
-import { WebhookController } from './controllers/webhook.controller';
-import { authMiddleware } from './shared/middleware/auth.middleware';
+import { getSupabaseClient } from './infra/database/supabase.js';
+import { IntegrationRepository } from './repositories/integration.repository.js';
+import { OrdersRepository } from './repositories/orders.repository.js';
+import { PaymentsRepository } from './repositories/payments.repository.js';
+import { SyncStateRepository } from './repositories/sync-state.repository.js';
+import { MarketplaceAuthService } from './services/auth.service.js';
+import { MarketplaceSyncService } from './services/sync.service.js';
+import { IntegrationController } from './controllers/integration.controller.js';
+import { OrdersController } from './controllers/orders.controller.js';
+import { WebhookController } from './controllers/webhook.controller.js';
+import { authMiddleware } from './shared/middleware/auth.middleware.js';
 
 export function createMarketplaceRouter(): Router {
   const router = Router();
@@ -51,3 +51,4 @@ export function createMarketplaceRouter(): Router {
 
   return router;
 }
+

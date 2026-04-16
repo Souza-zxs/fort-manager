@@ -7,3 +7,5 @@ app.listen(PORT, () => {
   console.log(`📦 Marketplaces API: http://localhost:${PORT}/api/marketplaces`);
   console.log(`🛒 Mercado Livre API: http://localhost:${PORT}/api/marketplaces/mercadolivre`);
 });
+
+

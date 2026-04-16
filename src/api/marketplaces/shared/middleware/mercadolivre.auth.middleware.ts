@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { getSupabaseClient } from '../../infra/database/supabase';
 import { IntegrationRepository } from '../../repositories/integration.repository';
-import { AuthenticatedRequest } from './auth.middleware';
+import { AuthenticatedRequest } from './auth.middleware.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Middleware: carrega as credenciais do Mercado Livre e as injeta em
@@ -59,3 +59,4 @@ export async function meliAuthMiddleware(
     res.status(500).json({ error: message });
   }
 }
+

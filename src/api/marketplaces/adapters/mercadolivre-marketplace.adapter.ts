@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { MercadoLivreAdapter } from './ml.adapter';
-import { MarketplaceAdapter } from './marketplace.adapter';
+import { MercadoLivreAdapter } from './ml.adapter.js';
+import { MarketplaceAdapter } from './marketplace.adapter.js';
 import {
   MarketplaceAuthorizationUrl,
   MarketplaceTokenSet,
@@ -273,3 +273,5 @@ export class MercadoLivreMarketplaceAdapter implements MarketplaceAdapter {
 export function createMercadoLivreMarketplaceAdapter(): MercadoLivreMarketplaceAdapter {
   return new MercadoLivreMarketplaceAdapter();
 }
+
+

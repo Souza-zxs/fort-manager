@@ -53,3 +53,4 @@ export async function authMiddleware(
     next(error);
   }
 }
+

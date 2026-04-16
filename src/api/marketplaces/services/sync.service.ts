@@ -1,5 +1,5 @@
 import { getAdapter } from '../adapters/adapter.registry';
-import { MarketplaceAuthService } from './auth.service';
+import { MarketplaceAuthService } from './auth.service.js';
 import { IntegrationRepository } from '../repositories/integration.repository';
 import { OrdersRepository } from '../repositories/orders.repository';
 import { PaymentsRepository } from '../repositories/payments.repository';
@@ -218,3 +218,5 @@ export class MarketplaceSyncService {
     };
   }
 }
+
+

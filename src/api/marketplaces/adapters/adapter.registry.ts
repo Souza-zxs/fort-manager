@@ -1,6 +1,6 @@
-import { MarketplaceAdapter } from './marketplace.adapter';
-import { createShopeeAdapter } from './shopee.adapter';
-import { createMercadoLivreMarketplaceAdapter } from './mercadolivre-marketplace.adapter';
+import { MarketplaceAdapter } from './marketplace.adapter.js';
+import { createShopeeAdapter } from './shopee.adapter.js';
+import { createMercadoLivreMarketplaceAdapter } from './mercadolivre-marketplace.adapter.js';
 import { MarketplaceName } from '../types/marketplace.types';
 import { BadRequestError } from '../shared/errors/errors';
 
@@ -30,3 +30,4 @@ export function getAdapter(
 
   throw new BadRequestError(`Unsupported marketplace: ${marketplace}`);
 }
+

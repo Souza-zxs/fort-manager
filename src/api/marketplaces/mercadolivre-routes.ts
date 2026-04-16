@@ -23,7 +23,7 @@ import { authMiddleware } from '../marketplaces/shared/middleware/auth.middlewar
 // ─────────────────────────────────────────────────────────────────────────────
 // Para usar: importe este router no seu routes.ts existente:
 //
-//   import meliRoutes from './marketplaces/mercadolivre.routes';
+//   import meliRoutes from './marketplaces/mercadolivre.routes.js';
 //   router.use('/marketplaces/mercadolivre', meliRoutes);
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -60,3 +60,4 @@ router.get('/finance/summary',          getFinancialSummary);
 router.get('/finance/payments/:paymentId', getPayment);
 
 export default router;
+

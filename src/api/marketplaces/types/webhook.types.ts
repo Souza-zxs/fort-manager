@@ -62,3 +62,4 @@ export function extractResourceId(resourceUrl: string): string {
   const match = resourceUrl.match(/\/(\d+)$/);
   return match ? match[1] : '';
 }
+

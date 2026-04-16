@@ -40,3 +40,4 @@ export class SyncStateRepository {
     return data ?? [];
   }
 }
+

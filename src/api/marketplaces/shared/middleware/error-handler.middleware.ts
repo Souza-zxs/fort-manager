@@ -22,3 +22,4 @@ export function errorHandler(
     message: 'Internal server error',
   });
 }
+

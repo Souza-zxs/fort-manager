@@ -169,3 +169,5 @@ export function getSupabaseClient(): SupabaseClient<Database> {
 
   return client;
 }
+
+

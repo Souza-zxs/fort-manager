@@ -609,3 +609,4 @@ export class MercadoLivreAdapter {
     return refunds.some(r => r.reason === 'chargeback');
   }
 }
+

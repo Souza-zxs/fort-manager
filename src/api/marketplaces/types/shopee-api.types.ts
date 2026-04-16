@@ -87,3 +87,5 @@ export interface ShopeeTransactionListResponse {
   more: boolean;
   next_cursor: string;
 }
+
+
