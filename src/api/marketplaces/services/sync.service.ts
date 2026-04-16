@@ -1,9 +1,9 @@
-import { getAdapter } from '../adapters/adapter.registry';
+﻿import { getAdapter } from '../adapters/adapter.registry.js';
 import { MarketplaceAuthService } from './auth.service.js';
-import { IntegrationRepository } from '../repositories/integration.repository';
-import { OrdersRepository } from '../repositories/orders.repository';
-import { PaymentsRepository } from '../repositories/payments.repository';
-import { SyncStateRepository } from '../repositories/sync-state.repository';
+import { IntegrationRepository } from '../repositories/integration.repository.js';
+import { OrdersRepository } from '../repositories/orders.repository.js';
+import { PaymentsRepository } from '../repositories/payments.repository.js';
+import { SyncStateRepository } from '../repositories/sync-state.repository.js';
 import { 
   Integration, 
   MarketplaceOrder, 
@@ -12,8 +12,8 @@ import {
   CreatePaymentDto, 
   SyncResult,
   OrderStatus,
-} from '../types/marketplace.types';
-import { daysAgoUnix, nowUnix, unixToDate, dateToUnix } from '../shared/utils';
+} from '../types/marketplace.types.js';
+import { daysAgoUnix, nowUnix, unixToDate, dateToUnix } from '../shared/utils.js';
 
 const SYNC_WINDOW_DAYS = 30;
 const PAGE_SIZE = 50;
@@ -218,5 +218,6 @@ export class MarketplaceSyncService {
     };
   }
 }
+
 
 

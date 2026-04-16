@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
+﻿import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { UnauthorizedError } from '../errors/errors';
+import { UnauthorizedError } from '../errors/errors.js';
 
 export interface AuthenticatedRequest extends Request {
   userId: string;
@@ -53,4 +53,5 @@ export async function authMiddleware(
     next(error);
   }
 }
+
 

@@ -1,10 +1,10 @@
-import { getAdapter } from '../adapters/adapter.registry';
-import { IntegrationRepository } from '../repositories/integration.repository';
-import { OrdersRepository } from '../repositories/orders.repository';
-import { PaymentsRepository } from '../repositories/payments.repository';
-import { MarketplaceAuthService } from '../services/auth.service';
-import { Integration, PaymentStatus } from '../types/marketplace.types';
-import { MeliPaymentDetail, MeliRefundDetail } from '../types/mercadolivre-types';
+﻿import { getAdapter } from '../adapters/adapter.registry.js';
+import { IntegrationRepository } from '../repositories/integration.repository.js';
+import { OrdersRepository } from '../repositories/orders.repository.js';
+import { PaymentsRepository } from '../repositories/payments.repository.js';
+import { MarketplaceAuthService } from '../services/auth.service.js';
+import { Integration, PaymentStatus } from '../types/marketplace.types.js';
+import { MeliPaymentDetail, MeliRefundDetail } from '../types/mercadolivre-types.js';
 
 export interface PaymentConsistencyResult {
   paymentId: string;
@@ -179,4 +179,5 @@ export class PaymentConsistencyService {
     }
   }
 }
+
 

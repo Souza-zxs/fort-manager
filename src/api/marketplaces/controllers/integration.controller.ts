@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import { MarketplaceAuthService } from '../services/auth.service';
-import { MarketplaceSyncService } from '../services/sync.service';
-import { IntegrationRepository } from '../repositories/integration.repository';
-import { MarketplaceName } from '../types/marketplace.types';
-import { BadRequestError } from '../shared/errors/errors';
-import { AuthenticatedResponse } from '../shared/middleware/auth.middleware';
+﻿import { Request, Response, NextFunction } from 'express';
+import { MarketplaceAuthService } from '../services/auth.service.js';
+import { MarketplaceSyncService } from '../services/sync.service.js';
+import { IntegrationRepository } from '../repositories/integration.repository.js';
+import { MarketplaceName } from '../types/marketplace.types.js';
+import { BadRequestError } from '../shared/errors/errors.js';
+import { AuthenticatedResponse } from '../shared/middleware/auth.middleware.js';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -120,5 +120,6 @@ export class IntegrationController {
     }
   };
 }
+
 
 

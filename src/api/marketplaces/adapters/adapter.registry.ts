@@ -1,8 +1,8 @@
-import { MarketplaceAdapter } from './marketplace.adapter.js';
+﻿import { MarketplaceAdapter } from './marketplace.adapter.js';
 import { createShopeeAdapter } from './shopee.adapter.js';
 import { createMercadoLivreMarketplaceAdapter } from './mercadolivre-marketplace.adapter.js';
-import { MarketplaceName } from '../types/marketplace.types';
-import { BadRequestError } from '../shared/errors/errors';
+import { MarketplaceName } from '../types/marketplace.types.js';
+import { BadRequestError } from '../shared/errors/errors.js';
 
 // Cache apenas para adapters SEM estado de autenticação
 const statelessAdapters = new Map<MarketplaceName, MarketplaceAdapter>();
@@ -30,4 +30,5 @@ export function getAdapter(
 
   throw new BadRequestError(`Unsupported marketplace: ${marketplace}`);
 }
+
 

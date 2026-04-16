@@ -1,14 +1,14 @@
-import { getAdapter } from '../adapters/adapter.registry';
-import { IntegrationRepository } from '../repositories/integration.repository';
+﻿import { getAdapter } from '../adapters/adapter.registry.js';
+import { IntegrationRepository } from '../repositories/integration.repository.js';
 import {
   Integration,
   CreateIntegrationDto,
   UpdateTokensDto,
   MarketplaceName,
   MarketplaceAuthorizationUrl,
-} from '../types/marketplace.types';
-import { BadRequestError, TokenExpiredError } from '../shared/errors/errors';
-import { secondsFromNow, isTokenNearExpiry, generateState } from '../shared/utils/index';
+} from '../types/marketplace.types.js';
+import { BadRequestError, TokenExpiredError } from '../shared/errors/errors.js';
+import { secondsFromNow, isTokenNearExpiry, generateState } from '../shared/utils/index.js';
 import { createHmac, timingSafeEqual } from 'crypto';
 
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
@@ -212,5 +212,6 @@ export class MarketplaceAuthService {
     return secret;
   }
 }
+
 
 

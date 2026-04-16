@@ -1,7 +1,7 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database, IntegrationInsert, IntegrationUpdate } from '../infra/database/supabase';
-import { Integration, CreateIntegrationDto, UpdateTokensDto, MarketplaceName } from '../types/marketplace.types';
-import { IntegrationNotFoundError } from '../shared/errors/errors';
+﻿import { SupabaseClient } from '@supabase/supabase-js';
+import { Database, IntegrationInsert, IntegrationUpdate } from '../infra/database/supabase.js';
+import { Integration, CreateIntegrationDto, UpdateTokensDto, MarketplaceName } from '../types/marketplace.types.js';
+import { IntegrationNotFoundError } from '../shared/errors/errors.js';
 
 export class IntegrationRepository {
   constructor(private readonly db: SupabaseClient<Database>) {}
@@ -139,5 +139,6 @@ export class IntegrationRepository {
     updatedAt: new Date(row.updated_at),
   });
 }
+
 
 

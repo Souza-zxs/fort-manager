@@ -1,8 +1,8 @@
-import { SupabaseClient } from '@supabase/supabase-js';
+﻿import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from "../infra/database/supabase";
-import { Payout, CreatePayoutDto, PayoutStatus } from '../types/marketplace.types';
-import { PayoutUpdate } from '../infra/database/supabase';
-import { PayoutInsert } from '../infra/database/supabase';
+import { Payout, CreatePayoutDto, PayoutStatus } from '../types/marketplace.types.js';
+import { PayoutUpdate } from '../infra/database/supabase.js';
+import { PayoutInsert } from '../infra/database/supabase.js';
 
 export class PayoutsRepository {
   constructor(private readonly db: SupabaseClient<Database>) {}
@@ -120,5 +120,6 @@ export class PayoutsRepository {
     createdAt: new Date(row.created_at),
   });
 }
+
 
 

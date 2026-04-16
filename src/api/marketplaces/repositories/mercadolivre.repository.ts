@@ -1,4 +1,4 @@
-import { MercadoLivreAdapter } from '../adapters/ml.adapter';
+﻿import { MercadoLivreAdapter } from '../adapters/ml.adapter.js';
 import {
   MeliItem,
   MeliCreateItemPayload,
@@ -7,7 +7,7 @@ import {
   MeliPayment,
   MeliAccountMovement,
   MeliBalanceSummary,
-} from '../types/mercadolivre-types';
+} from '../types/mercadolivre-types.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Camada de repositório: orquestra chamadas ao adapter e expõe métodos
@@ -179,4 +179,5 @@ export class MercadoLivreRepository {
     };
   }
 }
+
 

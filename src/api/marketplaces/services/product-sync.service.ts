@@ -1,7 +1,7 @@
-import { getAdapter } from '../adapters/adapter.registry';
-import { IntegrationRepository } from '../repositories/integration.repository';
-import { MarketplaceAuthService } from '../services/auth.service';
-import { Integration } from '../types/marketplace.types';
+﻿import { getAdapter } from '../adapters/adapter.registry.js';
+import { IntegrationRepository } from '../repositories/integration.repository.js';
+import { MarketplaceAuthService } from '../services/auth.service.js';
+import { Integration } from '../types/marketplace.types.js';
 
 export interface SyncProductResult {
   productId: string;
@@ -325,4 +325,5 @@ export class ProductSyncService {
     return chunks;
   }
 }
+
 

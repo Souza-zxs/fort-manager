@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+﻿import axios, { AxiosInstance, AxiosError } from 'axios';
 import {
   MeliCredentials,
   MeliTokenResponse,
@@ -20,7 +20,7 @@ import {
   MeliInventoryUpdate,
   MeliInventoryUpdateResponse,
   MeliItemWithVariations,
-} from '../types/mercadolivre-types';
+} from '../types/mercadolivre-types.js';
 
 const BASE_URL = 'https://api.mercadolibre.com';
 const SITE_ID  = 'MLB'; // Brasil
@@ -609,4 +609,5 @@ export class MercadoLivreAdapter {
     return refunds.some(r => r.reason === 'chargeback');
   }
 }
+
 

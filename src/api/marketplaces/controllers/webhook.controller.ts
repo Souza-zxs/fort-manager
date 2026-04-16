@@ -1,9 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
-import { parseWebhookPayload, MlWebhookEvent, MlWebhookTopic } from '../types/webhook.types';
-import { IntegrationRepository } from '../repositories/integration.repository';
-import { MarketplaceSyncService } from '../services/sync.service';
-import { MarketplaceAuthService } from '../services/auth.service';
-import { getAdapter } from '../adapters/adapter.registry';
+﻿import { Request, Response, NextFunction } from 'express';
+import { parseWebhookPayload, MlWebhookEvent, MlWebhookTopic } from '../types/webhook.types.js';
+import { IntegrationRepository } from '../repositories/integration.repository.js';
+import { MarketplaceSyncService } from '../services/sync.service.js';
+import { MarketplaceAuthService } from '../services/auth.service.js';
+import { getAdapter } from '../adapters/adapter.registry.js';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
@@ -238,4 +238,5 @@ export class WebhookController {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   };
 }
+
 

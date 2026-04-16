@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { AppError } from '../errors/errors';
+﻿import { Request, Response, NextFunction } from 'express';
+import { AppError } from '../errors/errors.js';
 
 export function errorHandler(
   error: Error,
@@ -22,4 +22,5 @@ export function errorHandler(
     message: 'Internal server error',
   });
 }
+
 

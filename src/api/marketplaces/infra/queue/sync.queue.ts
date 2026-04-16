@@ -1,4 +1,4 @@
-import { MarketplaceSyncService } from '../../services/sync.service';
+﻿import { MarketplaceSyncService } from '../../services/sync.service.js';
 
 interface QueueJob {
   integrationId: string;
@@ -75,5 +75,6 @@ export class SyncQueue {
     }
   }
 }
+
 
 

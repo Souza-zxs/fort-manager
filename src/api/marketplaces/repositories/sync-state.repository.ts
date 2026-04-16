@@ -1,5 +1,5 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database, SyncStateRow, SyncStateInsert } from '../infra/database/supabase';
+﻿import { SupabaseClient } from '@supabase/supabase-js';
+import { Database, SyncStateRow, SyncStateInsert } from '../infra/database/supabase.js';
 
 export class SyncStateRepository {
   constructor(private readonly db: SupabaseClient<Database>) {}
@@ -40,4 +40,5 @@ export class SyncStateRepository {
     return data ?? [];
   }
 }
+
 

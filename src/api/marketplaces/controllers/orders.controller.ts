@@ -1,8 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import { OrdersRepository } from '../repositories/orders.repository';
-import { PaymentsRepository } from '../repositories/payments.repository';
-import { IntegrationRepository } from '../repositories/integration.repository';
-import { AuthenticatedResponse } from '../shared/middleware/auth.middleware';
+﻿import { Request, Response, NextFunction } from 'express';
+import { OrdersRepository } from '../repositories/orders.repository.js';
+import { PaymentsRepository } from '../repositories/payments.repository.js';
+import { IntegrationRepository } from '../repositories/integration.repository.js';
+import { AuthenticatedResponse } from '../shared/middleware/auth.middleware.js';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -76,5 +76,6 @@ export class OrdersController {
     }
   };
 }
+
 
 

@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
-import { MercadoLivreAdapter } from '../adapters/ml.adapter';
-import { MercadoLivreRepository } from '../repositories/mercadolivre.repository';
-import { MeliCreateItemPayload, MeliUpdateItemPayload } from '../types/mercadolivre-types';
+﻿import { Request, Response } from 'express';
+import { MercadoLivreAdapter } from '../adapters/ml.adapter.js';
+import { MercadoLivreRepository } from '../repositories/mercadolivre.repository.js';
+import { MeliCreateItemPayload, MeliUpdateItemPayload } from '../types/mercadolivre-types.js';
 
 type ItemReq    = Request<{ itemId: string }>;
 type OrderReq   = Request<{ orderId: string }>;
@@ -314,5 +314,6 @@ export async function getPayment(req: PaymentReq, res: Response): Promise<void> 
     res.status(404).json({ error: errorMessage(err) });
   }
 }
+
 
 

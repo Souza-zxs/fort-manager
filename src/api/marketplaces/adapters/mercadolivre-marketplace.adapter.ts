@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import { MercadoLivreAdapter } from './ml.adapter.js';
 import { MarketplaceAdapter } from './marketplace.adapter.js';
 import {
@@ -12,13 +12,13 @@ import {
   MarketplaceName,
   OrderStatus,
   PaymentStatus,
-} from '../types/marketplace.types';
+} from '../types/marketplace.types.js';
 import {
   MeliTokenResponse,
   MeliOrder,
   MeliOrderStatus,
   MeliAccountMovement,
-} from '../types/mercadolivre-types';
+} from '../types/mercadolivre-types.js';
 
 const BASE_URL = 'https://api.mercadolibre.com';
 
@@ -273,5 +273,6 @@ export class MercadoLivreMarketplaceAdapter implements MarketplaceAdapter {
 export function createMercadoLivreMarketplaceAdapter(): MercadoLivreMarketplaceAdapter {
   return new MercadoLivreMarketplaceAdapter();
 }
+
 
 

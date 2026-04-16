@@ -1,6 +1,6 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { FeeInsert } from '../infra/database/supabase';
-import { Fee, CreateFeeDto, FeeType } from '../types/marketplace.types';
+﻿import { SupabaseClient } from '@supabase/supabase-js';
+import { FeeInsert } from '../infra/database/supabase.js';
+import { Fee, CreateFeeDto, FeeType } from '../types/marketplace.types.js';
 import { Database } from "../infra/database/supabase";
 
 export class FeesRepository {
@@ -88,5 +88,6 @@ export class FeesRepository {
     createdAt: new Date(row.created_at),
   });
 }
+
 
 

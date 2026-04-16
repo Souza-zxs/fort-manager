@@ -1,6 +1,6 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database, OrderInsert, OrderItemInsert } from '../infra/database/supabase';
-import { Order, OrderItem, CreateOrderDto } from '../types/marketplace.types';
+﻿import { SupabaseClient } from '@supabase/supabase-js';
+import { Database, OrderInsert, OrderItemInsert } from '../infra/database/supabase.js';
+import { Order, OrderItem, CreateOrderDto } from '../types/marketplace.types.js';
 
 export class OrdersRepository {
   constructor(private readonly db: SupabaseClient<Database>) {}
@@ -137,5 +137,6 @@ export class OrdersRepository {
     createdAt: new Date(row.created_at),
   });
 }
+
 
 

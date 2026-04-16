@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import {
   getAuthUrl,
   handleCallback,
@@ -16,9 +16,9 @@ import {
   getMovements,
   getFinancialSummary,
   getPayment,
-} from '../marketplaces/controllers/mercadolivre.controller';
-import { meliAuthMiddleware } from '../marketplaces/shared/middleware/mercadolivre.auth.middleware';
-import { authMiddleware } from '../marketplaces/shared/middleware/auth.middleware';
+} from '../marketplaces/controllers/mercadolivre.controller.js';
+import { meliAuthMiddleware } from '../marketplaces/shared/middleware/mercadolivre.auth.middleware.js';
+import { authMiddleware } from '../marketplaces/shared/middleware/auth.middleware.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Para usar: importe este router no seu routes.ts existente:
@@ -60,4 +60,5 @@ router.get('/finance/summary',          getFinancialSummary);
 router.get('/finance/payments/:paymentId', getPayment);
 
 export default router;
+
 

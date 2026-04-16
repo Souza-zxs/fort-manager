@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { getSupabaseClient } from '../../infra/database/supabase';
-import { IntegrationRepository } from '../../repositories/integration.repository';
+﻿import { Request, Response, NextFunction } from 'express';
+import { getSupabaseClient } from '../../infra/database/supabase.js';
+import { IntegrationRepository } from '../../repositories/integration.repository.js';
 import { AuthenticatedRequest } from './auth.middleware.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,4 +59,5 @@ export async function meliAuthMiddleware(
     res.status(500).json({ error: message });
   }
 }
+
 

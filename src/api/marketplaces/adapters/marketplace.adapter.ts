@@ -1,4 +1,4 @@
-import { MarketplaceAuthorizationUrl, MarketplaceTokenSet, MarketplaceOrder, MarketplacePayment, MarketplaceOrdersParams, MarketplacePaymentsParams, MarketplacePaginatedResult, MarketplaceName,} from '../types/marketplace.types';
+﻿import { MarketplaceAuthorizationUrl, MarketplaceTokenSet, MarketplaceOrder, MarketplacePayment, MarketplaceOrdersParams, MarketplacePaymentsParams, MarketplacePaginatedResult, MarketplaceName,} from '../types/marketplace.types.js';
 
 export interface MarketplaceAdapter {
   readonly marketplace: MarketplaceName;
@@ -39,5 +39,6 @@ export interface MarketplaceAdapter {
     params: MarketplacePaymentsParams,
   ): Promise<MarketplacePayment[]>;
 }
+
 
 
