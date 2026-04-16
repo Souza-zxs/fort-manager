@@ -128,6 +128,11 @@ export function useTriggerSync() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['integrations'] });
       const errText = result.errors.length > 0 ? ` (${result.errors.length} erro(s))` : '';
+
+      if (result.errors.length > 0) {
+  console.log('Erros da sync:', result.errors); // <-- adiciona aqui
+}
+
       toast({
         title: 'Sincronização concluída',
         description: `${result.ordersSynced} pedidos e ${result.paymentsSynced} pagamentos sincronizados.${errText}`,
