@@ -51,6 +51,21 @@ export class MercadoLivreMarketplaceAdapter implements MarketplaceAdapter {
   private readonly clientSecret: string;
   private readonly redirectUri: string;
 
+  private normalizeRelease = (raw: any): MarketplacePayment => {
+  return {
+    externalTransactionId: String(raw.id),
+    orderId:               raw.source_id ? String(raw.source_id) : '',
+    amount:                raw.amount,
+    currency:              raw.currency_id,
+    paymentMethod:         'mercado_pago',
+    marketplaceFee:        raw.fee_amount ? Math.abs(raw.fee_amount) : 0,
+    netAmount:             raw.net_credit_amount ?? raw.amount,
+    status:                'COMPLETED' as PaymentStatus,
+    transactionDate:       new Date(raw.date_created),
+    description:           raw.type ?? '',
+  };
+};
+
   constructor() {
     this.appId =
       process.env.MELI_APP_ID ?? process.env.VITE_ML_CLIENT_ID ?? '';
@@ -190,27 +205,34 @@ async exchangeCode(code: string, _shopId: string, codeVerifier?: string): Promis
   // ── Payments (movimentações da conta) ─────────────────────────────────────
 
   async getPayments(
-    accessToken: string,
-    shopId: string,
-    params: MarketplacePaymentsParams,
-  ): Promise<MarketplacePaginatedResult<MarketplacePayment>> {
-    const adapter  = this.buildMlAdapter(accessToken, shopId);
-    const offset   = ((params.pageNo ?? 1) - 1) * params.pageSize;
-    const dateFrom = new Date(params.timeFrom * 1000).toISOString().substring(0, 10);
-    const dateTo   = new Date(params.timeTo   * 1000).toISOString().substring(0, 10);
+  accessToken: string,
+  shopId: string,
+  params: MarketplacePaymentsParams,
+): Promise<MarketplacePaginatedResult<MarketplacePayment>> {
+  const offset   = ((params.pageNo ?? 1) - 1) * params.pageSize;
+  const dateFrom = new Date(params.timeFrom * 1000).toISOString();
+  const dateTo   = new Date(params.timeTo   * 1000).toISOString();
 
-    const batch = await adapter.getAccountMovements(Number(shopId), {
-      date_from: dateFrom,
-      date_to:   dateTo,
-      offset,
-      limit:     params.pageSize,
-    });
+  const { data } = await axios.get(
+    `${BASE_URL}/users/${shopId}/account/release/search`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      params: {
+        begin_date: dateFrom,
+        end_date:   dateTo,
+        offset,
+        limit:      params.pageSize,
+      },
+    },
+  );
 
-    return {
-      items:   batch.map(this.normalizePayment),
-      hasMore: batch.length >= params.pageSize,
-    };
-  }
+  const results = data.results ?? [];
+
+  return {
+    items:   results.map(this.normalizeRelease),
+    hasMore: results.length >= params.pageSize,
+  };
+}
 
   async getAllPayments(
     accessToken: string,
