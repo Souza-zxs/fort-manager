@@ -1,4 +1,5 @@
 ﻿import axios from 'axios';
+import { createHash, randomBytes } from 'crypto';
 import { MercadoLivreAdapter } from './ml.adapter.js';
 import { MarketplaceAdapter } from './marketplace.adapter.js';
 import {
@@ -21,16 +22,40 @@ import {
 } from '../types/mercadolivre-types.js';
 
 const BASE_URL = 'https://api.mercadolibre.com';
-
-// ML access tokens duram 6h; refresh tokens duram ~180 dias
 const REFRESH_TOKEN_TTL_SECONDS = 15_552_000;
+
+// Armazena code_verifier temporariamente por state (expira em 10min)
+const pkceStore = new Map<string, { verifier: string; expiresAt: number }>();
+
+function generateCodeVerifier(): string {
+  return randomBytes(32).toString('base64url');
+}
+
+function generateCodeChallenge(verifier: string): string {
+  return createHash('sha256').update(verifier).digest('base64url');
+}
+
+function storePkceVerifier(state: string, verifier: string): void {
+  pkceStore.set(state, { verifier, expiresAt: Date.now() + 10 * 60 * 1000 });
+  // Limpa entradas expiradas
+  for (const [key, value] of pkceStore.entries()) {
+    if (value.expiresAt < Date.now()) pkceStore.delete(key);
+  }
+}
+
+function consumePkceVerifier(state: string): string | null {
+  const entry = pkceStore.get(state);
+  if (!entry || entry.expiresAt < Date.now()) return null;
+  pkceStore.delete(state);
+  return entry.verifier;
+}
 
 function mapMeliStatus(status: MeliOrderStatus): OrderStatus {
   switch (status) {
-    case 'paid':            return 'COMPLETED';
-    case 'cancelled':       return 'CANCELLED';
-    case 'confirmed':       return 'READY_TO_SHIP';
-    default:                return 'UNPAID';
+    case 'paid':      return 'COMPLETED';
+    case 'cancelled': return 'CANCELLED';
+    case 'confirmed': return 'READY_TO_SHIP';
+    default:          return 'UNPAID';
   }
 }
 
@@ -42,7 +67,6 @@ export class MercadoLivreMarketplaceAdapter implements MarketplaceAdapter {
   private readonly redirectUri: string;
 
   constructor() {
-    // Node carrega MELI_* no servidor; VITE_ML_* costuma existir no mesmo .env (fallback útil no dev)
     this.appId =
       process.env.MELI_APP_ID ?? process.env.VITE_ML_CLIENT_ID ?? '';
     this.clientSecret =
@@ -52,7 +76,7 @@ export class MercadoLivreMarketplaceAdapter implements MarketplaceAdapter {
 
     if (!this.appId || !this.clientSecret || !this.redirectUri) {
       throw new Error(
-        'Missing Mercado Livre env: MELI_APP_ID (ou VITE_ML_CLIENT_ID), MELI_CLIENT_SECRET (ou VITE_ML_CLIENT_SECRET), MELI_REDIRECT_URI (ou VITE_ML_REDIRECT_URI)',
+        'Missing Mercado Livre env: MELI_APP_ID, MELI_CLIENT_SECRET, MELI_REDIRECT_URI',
       );
     }
   }
@@ -60,33 +84,54 @@ export class MercadoLivreMarketplaceAdapter implements MarketplaceAdapter {
   // ── Auth ──────────────────────────────────────────────────────────────────
 
   getAuthorizationUrl(state: string): MarketplaceAuthorizationUrl {
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = generateCodeChallenge(codeVerifier);
+    storePkceVerifier(state, codeVerifier);
+
+    const params = new URLSearchParams({
+      response_type:          'code',
+      client_id:              this.appId,
+      redirect_uri:           this.redirectUri,
+      state,
+      code_challenge:         codeChallenge,
+      code_challenge_method:  'S256',
+    });
+
     return {
-      url: MercadoLivreAdapter.getAuthUrl(this.appId, this.redirectUri, state),
+      url: `https://auth.mercadolivre.com.br/authorization?${params.toString()}`,
       state,
     };
   }
 
-  async exchangeCode(code: string): Promise<MarketplaceTokenSet> {
+  async exchangeCode(code: string, _shopId: string, state?: string): Promise<MarketplaceTokenSet> {
+    const codeVerifier = state ? consumePkceVerifier(state) : null;
+
+    const body = new URLSearchParams({
+      grant_type:    'authorization_code',
+      client_id:     this.appId,
+      client_secret: this.clientSecret,
+      redirect_uri:  this.redirectUri,
+      code,
+    });
+
+    if (codeVerifier) {
+      body.set('code_verifier', codeVerifier);
+    }
+
     const { data } = await axios.post<MeliTokenResponse>(
       `${BASE_URL}/oauth/token`,
-      new URLSearchParams({
-        grant_type:    'authorization_code',
-        client_id:     this.appId,
-        client_secret: this.clientSecret,
-        redirect_uri:  this.redirectUri,
-        code,
-      }),
+      body,
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
     );
 
     const shopName = await this.fetchShopName(data.access_token, data.user_id);
 
     return {
-      accessToken:            data.access_token,
-      refreshToken:           data.refresh_token,
-      accessTokenExpiresIn:   data.expires_in,
-      refreshTokenExpiresIn:  REFRESH_TOKEN_TTL_SECONDS,
-      shopId:                 String(data.user_id),
+      accessToken:           data.access_token,
+      refreshToken:          data.refresh_token,
+      accessTokenExpiresIn:  data.expires_in,
+      refreshTokenExpiresIn: REFRESH_TOKEN_TTL_SECONDS,
+      shopId:                String(data.user_id),
       shopName,
     };
   }

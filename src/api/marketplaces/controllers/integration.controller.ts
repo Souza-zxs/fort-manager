@@ -63,7 +63,7 @@ export class IntegrationController {
         this.authService.validateCallbackState(state!, marketplace, userId);
       }
 
-      const integration = await this.authService.handleCallback(marketplace, code, shop_id ?? '', userId);
+const integration = await this.authService.handleCallback(marketplace, code, shop_id ?? '', userId, state);
 
       // Retorna DTO flat — compatível com CallbackResultDto no frontend
       (res as AuthenticatedResponse).status(201).json({

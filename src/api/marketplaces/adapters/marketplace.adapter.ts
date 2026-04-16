@@ -8,6 +8,7 @@ export interface MarketplaceAdapter {
   exchangeCode(
     code: string,
     shopId?: string,
+    state?: string,  
   ): Promise<MarketplaceTokenSet>;
 
   refreshTokens(

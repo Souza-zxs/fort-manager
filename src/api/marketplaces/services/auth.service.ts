@@ -60,14 +60,15 @@ export class MarketplaceAuthService {
     }
   }
 
-  async handleCallback(
-    marketplace: MarketplaceName,
-    code: string,
-    shopId: string,
-    userId: string,
-  ): Promise<Integration> {
-    const adapter = getAdapter(marketplace);
-    const tokens = await adapter.exchangeCode(code, shopId);
+async handleCallback(
+  marketplace: MarketplaceName,
+  code: string,
+  shopId: string,
+  userId: string,
+  state?: string,  // <-- adiciona isso
+): Promise<Integration> {
+  const adapter = getAdapter(marketplace);
+  const tokens = await adapter.exchangeCode(code, shopId, state);  // <-- passa state aqui
 
     const dto: CreateIntegrationDto = {
       userId,
