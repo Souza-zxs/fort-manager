@@ -37,21 +37,28 @@ interface Product {
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const { toast } = useToast();
 
-    useEffect(() => {
-      marketplaceApi.listProducts()
-        .then(data => setProducts(data.map(p => ({
-          id: p.id,
-          name: p.title,
-          sku: p.sku,
-          category: p.categoryName || '—',
-          price: p.price,
-          stock: p.availableQuantity,
-          status: p.status === 'active' ? 'Ativo' : p.availableQuantity === 0 ? 'Sem Estoque' : 'Inativo',
-          image: p.thumbnail,
-        }))))
-        .catch(() => toast({ title: "Erro ao carregar produtos", variant: "destructive" }))
-        .finally(() => setLoading(false));
-    }, []);
+useEffect(() => {
+  setLoading(true);
+  marketplaceApi.listProducts()
+    .then(data => {
+      console.log('produtos recebidos:', data);
+      setProducts(data.map(p => ({
+        id: p.id,
+        name: p.title,
+        sku: p.sku,
+        category: p.categoryName || '—',
+        price: p.price,
+        stock: p.availableQuantity,
+        status: p.status === 'active' ? 'Ativo' : p.availableQuantity === 0 ? 'Sem Estoque' : 'Inativo',
+        image: p.thumbnail,
+      })));
+    })
+    .catch(err => {
+      console.error('erro ao carregar produtos:', err);
+      toast({ title: "Erro ao carregar produtos", variant: "destructive" });
+    })
+    .finally(() => setLoading(false));
+}, []);
 
 
     const [form, setForm] = useState({ name: "", sku: "", category: "", price: "", stock: "", status: "Ativo" as Product["status"] });
