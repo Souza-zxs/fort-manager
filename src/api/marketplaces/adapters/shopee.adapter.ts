@@ -4,8 +4,7 @@ import { MarketplaceAdapter } from './marketplace.adapter.js';
 import { MarketplaceAuthorizationUrl, MarketplaceTokenSet, MarketplaceOrder, MarketplacePayment, MarketplaceOrdersParams,MarketplacePaymentsParams, MarketplacePaginatedResult,MarketplaceName, OrderStatus,PaymentStatus,} from '../types/marketplace.types.js';
 import { ShopeeApiResponse, ShopeeTokenResponse, ShopeeOrderListResponse, ShopeeOrderDetailResponse, ShopeeOrderDetail, ShopeeTransactionListResponse, ShopeeTransaction,} from '../types/shopee-api.types.js';
 import { MarketplaceApiError } from '../shared/errors/errors.js';
-import { secondsFromNow, unixToDate, generateState } from '../shared/utils.js';
-
+import { secondsFromNow, unixToDate, generateState } from '../shared/utils/index.js';
 export interface ShopeeConfig {
   partnerId: number;
   partnerKey: string;
