@@ -281,14 +281,20 @@ export class ProductSyncService {
   const errors: string[] = [];
 
   const integration = await this.integrationRepository.findByIdForUser(integrationId, userId);
+    console.log('INTEGRATION:', integration); // 👈
+
   if (!integration) throw new Error(`Integration ${integrationId} not found`);
 
   const accessToken = await this.authService.getValidAccessToken(integration);
+    console.log('ACCESS TOKEN OK:', !!accessToken); // 👈
+
   const adapter = getAdapter(integration.marketplace as any);
 
   try {
-    // usa getProducts que já existe no MercadoLivreMarketplaceAdapter
+    
     const products = await adapter.getProducts(accessToken, integration.shopId);
+        console.log('PRODUTOS DO ADAPTER:', products.length); // 👈
+
 
     await this.productsRepo.upsertMany(
       products.map((item) => ({
@@ -307,6 +313,7 @@ export class ProductSyncService {
         permalink:         item.permalink,
       })),
     );
+    console.log('UPSERT CONCLUÍDO'); // 👈
 
     return {
       integrationId,
@@ -315,6 +322,8 @@ export class ProductSyncService {
       syncedAt: new Date(),
     };
   } catch (err) {
+        console.error('ERRO NO SYNC:', err); // 👈
+
     const msg = err instanceof Error ? err.message : String(err);
     return { integrationId, productsSynced: 0, errors: [msg], syncedAt: new Date() };
   }
