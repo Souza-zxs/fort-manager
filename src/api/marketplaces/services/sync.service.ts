@@ -13,7 +13,7 @@ import {
   SyncResult,
   OrderStatus,
 } from '../types/marketplace.types.js';
-import { daysAgoUnix, nowUnix, unixToDate, dateToUnix } from '../shared/utils.js';
+import { daysAgoUnix, nowUnix, unixToDate, dateToUnix } from '../shared/utils/index.js';
 
 const SYNC_WINDOW_DAYS = 30;
 const PAGE_SIZE = 50;
@@ -218,6 +218,7 @@ export class MarketplaceSyncService {
     };
   }
 }
+
 
 
 
