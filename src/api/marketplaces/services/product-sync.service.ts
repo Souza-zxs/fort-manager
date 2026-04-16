@@ -322,7 +322,7 @@ export class ProductSyncService {
       syncedAt: new Date(),
     };
   } catch (err) {
-        console.error('ERRO NO SYNC:', err); // 👈
+        console.error('ERRO NO SYNC:', err); 
 
     const msg = err instanceof Error ? err.message : String(err);
     return { integrationId, productsSynced: 0, errors: [msg], syncedAt: new Date() };
