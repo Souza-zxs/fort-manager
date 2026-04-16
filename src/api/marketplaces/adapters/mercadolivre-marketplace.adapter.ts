@@ -24,9 +24,6 @@ import {
 const BASE_URL = 'https://api.mercadolibre.com';
 const REFRESH_TOKEN_TTL_SECONDS = 15_552_000;
 
-// Armazena code_verifier temporariamente por state (expira em 10min)
-const pkceStore = new Map<string, { verifier: string; expiresAt: number }>();
-
 function generateCodeVerifier(): string {
   return randomBytes(32).toString('base64url');
 }
@@ -34,21 +31,7 @@ function generateCodeVerifier(): string {
 function generateCodeChallenge(verifier: string): string {
   return createHash('sha256').update(verifier).digest('base64url');
 }
-
-function storePkceVerifier(state: string, verifier: string): void {
-  pkceStore.set(state, { verifier, expiresAt: Date.now() + 10 * 60 * 1000 });
-  // Limpa entradas expiradas
-  for (const [key, value] of pkceStore.entries()) {
-    if (value.expiresAt < Date.now()) pkceStore.delete(key);
-  }
-}
-
-function consumePkceVerifier(state: string): string | null {
-  const entry = pkceStore.get(state);
-  if (!entry || entry.expiresAt < Date.now()) return null;
-  pkceStore.delete(state);
-  return entry.verifier;
-}
+;
 
 function mapMeliStatus(status: MeliOrderStatus): OrderStatus {
   switch (status) {
@@ -83,29 +66,27 @@ export class MercadoLivreMarketplaceAdapter implements MarketplaceAdapter {
 
   // ── Auth ──────────────────────────────────────────────────────────────────
 
-  getAuthorizationUrl(state: string): MarketplaceAuthorizationUrl {
-    const codeVerifier = generateCodeVerifier();
-    const codeChallenge = generateCodeChallenge(codeVerifier);
-    storePkceVerifier(state, codeVerifier);
+  // getAuthorizationUrl recebe o codeVerifier de fora
+getAuthorizationUrl(state: string, codeVerifier: string): MarketplaceAuthorizationUrl {
+  const codeChallenge = generateCodeChallenge(codeVerifier);
 
-    const params = new URLSearchParams({
-      response_type:          'code',
-      client_id:              this.appId,
-      redirect_uri:           this.redirectUri,
-      state,
-      code_challenge:         codeChallenge,
-      code_challenge_method:  'S256',
-    });
+  const params = new URLSearchParams({
+    response_type:         'code',
+    client_id:             this.appId,
+    redirect_uri:          this.redirectUri,
+    state,
+    code_challenge:        codeChallenge,
+    code_challenge_method: 'S256',
+  });
 
-    return {
-      url: `https://auth.mercadolivre.com.br/authorization?${params.toString()}`,
-      state,
-    };
-  }
+  return {
+    url: `https://auth.mercadolivre.com.br/authorization?${params.toString()}`,
+    state,
+  };
+}
 
-  async exchangeCode(code: string, _shopId: string, state?: string): Promise<MarketplaceTokenSet> {
-    const codeVerifier = state ? consumePkceVerifier(state) : null;
-
+// remove o parâmetro state — só codeVerifier importa
+async exchangeCode(code: string, _shopId: string, codeVerifier?: string): Promise<MarketplaceTokenSet> {
     const body = new URLSearchParams({
       grant_type:    'authorization_code',
       client_id:     this.appId,

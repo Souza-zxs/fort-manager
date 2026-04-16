@@ -9,7 +9,7 @@ import {
 } from '../types/marketplace.types.js';
 import { BadRequestError, TokenExpiredError } from '../shared/errors/errors.js';
 import { secondsFromNow, isTokenNearExpiry, generateState } from '../shared/utils/index.js';
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
@@ -24,6 +24,7 @@ interface OAuthStatePayload {
   marketplace: MarketplaceName;
   userId: string;
   issuedAt: number;
+  codeVerifier?: string; 
 }
 
 export class MarketplaceAuthService {
@@ -31,13 +32,15 @@ export class MarketplaceAuthService {
 
   getAuthorizationUrl(marketplace: MarketplaceName, userId: string): MarketplaceAuthorizationUrl {
     const adapter = getAdapter(marketplace);
+    const codeVerifier = randomBytes(32).toString('base64url'); 
     const state = this.createState({
       nonce: generateState(),
       marketplace,
       userId,
       issuedAt: Date.now(),
+      codeVerifier
     });
-    return adapter.getAuthorizationUrl(state);
+  return adapter.getAuthorizationUrl(state, codeVerifier);
   }
 
   validateCallbackState(state: string, marketplace: MarketplaceName, userId: string): void {
@@ -65,10 +68,11 @@ async handleCallback(
   code: string,
   shopId: string,
   userId: string,
-  state?: string,  // <-- adiciona isso
+  state?: string,
 ): Promise<Integration> {
   const adapter = getAdapter(marketplace);
-  const tokens = await adapter.exchangeCode(code, shopId, state);  // <-- passa state aqui
+  const payload = state? this.parseState(state) : null;
+  const tokens = await adapter.exchangeCode(code, shopId, payload?.codeVerifier);
 
     const dto: CreateIntegrationDto = {
       userId,

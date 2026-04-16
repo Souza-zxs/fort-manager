@@ -3,13 +3,13 @@
 export interface MarketplaceAdapter {
   readonly marketplace: MarketplaceName;
 
-  getAuthorizationUrl(state: string): MarketplaceAuthorizationUrl;
+getAuthorizationUrl(state: string, codeVerifier: string): MarketplaceAuthorizationUrl;
 
-  exchangeCode(
-    code: string,
-    shopId?: string,
-    state?: string,  
-  ): Promise<MarketplaceTokenSet>;
+ exchangeCode(
+  code: string,
+  shopId?: string,
+  codeVerifier?: string,
+): Promise<MarketplaceTokenSet>;
 
   refreshTokens(
     refreshToken: string,

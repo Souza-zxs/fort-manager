@@ -93,36 +93,36 @@ export class IntegrationRepository {
     return this.toEntity(data);
   }
 
-  async updateTokens(id: string, dto: UpdateTokensDto): Promise<void> {
-    const update: IntegrationUpdate = {
-      access_token: dto.accessToken,
-      refresh_token: dto.refreshToken,
-      access_token_expires_at: dto.accessTokenExpiresAt.toISOString(),
-      refresh_token_expires_at: dto.refreshTokenExpiresAt.toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+ async updateTokens(id: string, dto: UpdateTokensDto): Promise<void> {
+  const update = {
+    access_token: dto.accessToken,
+    refresh_token: dto.refreshToken,
+    access_token_expires_at: dto.accessTokenExpiresAt.toISOString(),
+    refresh_token_expires_at: dto.refreshTokenExpiresAt.toISOString(),
+    updated_at: new Date().toISOString(),
+  };
 
-    const { error } = await this.db
-      .from('integrations')
-      .update(update)
-      .eq('id', id);
+  const { error } = await (this.db as SupabaseClient)
+    .from('integrations')
+    .update(update)
+    .eq('id', id);
 
-    if (error) throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
+}
 
-  async deactivate(id: string): Promise<void> {
-    const update = {
-      is_active: false,
-      updated_at: new Date().toISOString(),
-    };
+async deactivate(id: string): Promise<void> {
+  const update = {
+    is_active: false,
+    updated_at: new Date().toISOString(),
+  };
 
-    const { error } = await this.db
-      .from('integrations')
-      .update(update)
-      .eq('id', id);
+  const { error } = await (this.db as SupabaseClient)
+    .from('integrations')
+    .update(update)
+    .eq('id', id);
 
-    if (error) throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
+}
 
   private toEntity = (row: Database['public']['Tables']['integrations']['Row']): Integration => ({
     id: row.id,
