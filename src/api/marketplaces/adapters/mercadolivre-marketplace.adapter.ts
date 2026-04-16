@@ -13,12 +13,14 @@ import {
   MarketplaceName,
   OrderStatus,
   PaymentStatus,
+  MarketplaceProduct,
 } from '../types/marketplace.types.js';
 import {
   MeliTokenResponse,
   MeliOrder,
   MeliOrderStatus,
   MeliAccountMovement,
+  MeliItem,
 } from '../types/mercadolivre-types.js';
 
 const BASE_URL = 'https://api.mercadolibre.com';
@@ -228,6 +230,45 @@ async exchangeCode(code: string, _shopId: string, codeVerifier?: string): Promis
 
     return all;
   }
+
+
+async getProducts(accessToken: string, shopId: string): Promise<MarketplaceProduct[]> {
+  const adapter = this.buildMlAdapter(accessToken, shopId);
+  const allIds: string[] = [];
+  let offset = 0;
+  const limit = 50;
+
+  // 1. Coleta todos os IDs paginando
+  while (true) {
+    const result = await adapter.searchItems(Number(shopId), { offset, limit });
+    allIds.push(...result.results);
+    if (allIds.length >= result.paging.total) break;
+    offset += limit;
+  }
+
+  // 2. Busca detalhes em lotes de 20 (limite do multiget ML)
+  const products: MarketplaceProduct[] = [];
+  for (let i = 0; i < allIds.length; i += 20) {
+    const batch = await adapter.getItemsBatch(allIds.slice(i, i + 20));
+    products.push(...batch.map(this.normalizeProduct));
+  }
+
+  return products;
+}
+
+private normalizeProduct = (raw: MeliItem): MarketplaceProduct => ({
+  externalItemId:    raw.id,
+  title:             raw.title,
+  sku:               raw.seller_custom_field ?? '',
+  categoryId:        raw.category_id,
+  categoryName:      '',           // ML não retorna nome na listagem — buscaremos depois se necessário
+  price:             raw.price,
+  availableQuantity: raw.available_quantity,
+  soldQuantity:      raw.sold_quantity,
+  status:            raw.status as MarketplaceProduct['status'],
+  thumbnail:         raw.thumbnail,
+  permalink:         raw.permalink,
+});
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 

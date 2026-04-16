@@ -10,10 +10,69 @@ export type OrderStatus =
 
 export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'REFUNDED' | 'FAILED';
 
+export type ProductStatus = 'active' | 'paused' | 'closed' | 'under_review';
+
+
 export interface MarketplaceAuthorizationUrl {
   url: string;
   state: string;
 }
+
+export interface MarketplaceProduct {
+  externalItemId: string;
+  title: string;
+  sku: string;
+  categoryId: string;
+  categoryName: string;
+  price: number;
+  availableQuantity: number;
+  soldQuantity: number;
+  status: ProductStatus;
+  thumbnail: string;
+  permalink: string;
+}
+
+export interface Product {
+  id: string;
+  integrationId: string;
+  externalItemId: string;
+  title: string;
+  sku: string;
+  categoryId: string;
+  categoryName: string;
+  price: number;
+  availableQuantity: number;
+  soldQuantity: number;
+  status: ProductStatus;
+  thumbnail: string;
+  permalink: string;
+  syncedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateProductDto {
+  integrationId: string;
+  externalItemId: string;
+  title: string;
+  sku: string;
+  categoryId: string;
+  categoryName: string;
+  price: number;
+  availableQuantity: number;
+  soldQuantity: number;
+  status: ProductStatus;
+  thumbnail: string;
+  permalink: string;
+}
+
+export interface ProductSyncResult {
+  integrationId: string;
+  productsSynced: number;
+  errors: string[];
+  syncedAt: Date;
+}
+
 
 export interface MarketplaceTokenSet {
   accessToken: string;
