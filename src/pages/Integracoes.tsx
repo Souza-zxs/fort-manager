@@ -256,54 +256,61 @@ const [syncingProducts, setSyncingProducts] = useState<string | null>(null);
                           </Button>
                         </div>
                       )}
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1"
-                            disabled={isSyncing}
-                            onClick={() => handleSyncNow(integration)}
-                          >
-                            {isSyncing ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <RefreshCw size={14} />
-                            )}
-                            {isSyncing ? "Sincronizando…" : "Sincronizar Pedidos"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1"
-                            disabled={syncingProducts === integration.id}
-                            onClick={() => {
-                              setSyncingProducts(integration.id);
-                              marketplaceApi.syncProducts(integration.id)
-                                .then(() => toast({ title: "Produtos sincronizados!" }))
-                                .catch(() => toast({ title: "Erro ao sincronizar produtos", variant: "destructive" }))
-                                .finally(() => setSyncingProducts(null));
-                            }}
-                          >
-                            {syncingProducts === integration.id ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <Package size={14} />
-                            )}
-                            {syncingProducts === integration.id ? "Sincronizando…" : "Sincronizar Produtos"}
-                          </Button>
-                          <Button size="sm" variant="outline" className="flex-1">
-                            <Settings size={14} />
-                            Configurar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={disconnect.isPending}
-                            onClick={() => handleDisconnect(integration)}
-                          >
-                            Desconectar
-                          </Button>
-                        </div>
+
+                      {/* Linha 1: Sincronizar Pedidos + Sincronizar Produtos */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          disabled={isSyncing}
+                          onClick={() => handleSyncNow(integration)}
+                        >
+                          {isSyncing ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <RefreshCw size={14} />
+                          )}
+                          {isSyncing ? "Sincronizando…" : "Sincronizar Pedidos"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          disabled={syncingProducts === integration.id}
+                          onClick={() => {
+                            setSyncingProducts(integration.id);
+                            marketplaceApi.syncProducts(integration.id)
+                              .then(() => toast({ title: "Produtos sincronizados!" }))
+                              .catch(() => toast({ title: "Erro ao sincronizar produtos", variant: "destructive" }))
+                              .finally(() => setSyncingProducts(null));
+                          }}
+                        >
+                          {syncingProducts === integration.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Package size={14} />
+                          )}
+                          {syncingProducts === integration.id ? "Sincronizando…" : "Sincronizar Produtos"}
+                        </Button>
+                      </div>
+
+                      {/* Linha 2: Configurar + Desconectar */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button size="sm" variant="outline" className="w-full">
+                          <Settings size={14} />
+                          Configurar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="w-full"
+                          disabled={disconnect.isPending}
+                          onClick={() => handleDisconnect(integration)}
+                        >
+                          Desconectar
+                        </Button>
+                      </div>
                     </div>
                   </>
                 ) : (
