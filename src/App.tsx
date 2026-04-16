@@ -17,7 +17,9 @@ import AdicionarProdutoML from "@/pages/AdicionarProdutoML";
 import DiagnosticoML from "@/pages/DiagnosticoML";
 import Configuracoes from "@/pages/Configuracoes";
 import NotFound from "./pages/NotFound";
-
+/**
+ * Rotas públicas (acesso anônimo): mantenha alinhado com `src/config/route-access.ts` (ANONYMOUS_PUBLIC_PATHS).
+ */
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { staleTime: 30_000, retry: 1 },

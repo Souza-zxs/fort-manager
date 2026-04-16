@@ -14,12 +14,8 @@ import {
 } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { ALLOWED_LOGIN_EMAIL } from "@/constants/auth";
+import { isAllowedAppUserEmail } from "@/lib/auth-allowlist";
 import { useToast } from "@/hooks/use-toast";
-
-function emailIsAllowed(email: string | undefined): boolean {
-  if (!email) return false;
-  return email.toLowerCase().trim() === ALLOWED_LOGIN_EMAIL.toLowerCase();
-}
 
 const Login = () => {
   const navigate = useNavigate();
@@ -37,7 +33,7 @@ const Login = () => {
     let cancelled = false;
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled) return;
-      if (session?.user && emailIsAllowed(session.user.email ?? undefined)) {
+      if (session?.user && isAllowedAppUserEmail(session.user.email ?? undefined)) {
         navigate(from, { replace: true });
         return;
       }
@@ -69,7 +65,7 @@ const Login = () => {
       });
 
       if (error) throw error;
-      if (!data.user || !emailIsAllowed(data.user.email ?? undefined)) {
+      if (!data.user || !isAllowedAppUserEmail(data.user.email ?? undefined)) {
         await supabase.auth.signOut();
         toast({
           title: "Acesso negado",

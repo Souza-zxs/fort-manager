@@ -2,12 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { ALLOWED_LOGIN_EMAIL } from "@/constants/auth";
-
-function emailIsAllowed(email: string | undefined): boolean {
-  if (!email) return false;
-  return email.toLowerCase().trim() === ALLOWED_LOGIN_EMAIL.toLowerCase();
-}
+import { isAllowedAppUserEmail } from "@/lib/auth-allowlist";
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -23,7 +18,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
         if (!cancelled) setStatus("denied");
         return;
       }
-      if (!emailIsAllowed(session.user.email ?? undefined)) {
+      if (!isAllowedAppUserEmail(session.user.email ?? undefined)) {
         await supabase.auth.signOut();
         if (!cancelled) setStatus("denied");
         return;
