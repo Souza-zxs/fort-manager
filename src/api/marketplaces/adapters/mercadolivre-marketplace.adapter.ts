@@ -202,9 +202,8 @@ async exchangeCode(code: string, _shopId: string, codeVerifier?: string): Promis
     return all;
   }
 
-  // ── Payments (movimentações da conta) ─────────────────────────────────────
 
-  async getPayments(
+async getPayments(
   accessToken: string,
   shopId: string,
   params: MarketplacePaymentsParams,
@@ -213,25 +212,32 @@ async exchangeCode(code: string, _shopId: string, codeVerifier?: string): Promis
   const dateFrom = new Date(params.timeFrom * 1000).toISOString();
   const dateTo   = new Date(params.timeTo   * 1000).toISOString();
 
-  const { data } = await axios.get(
-    `${BASE_URL}/users/${shopId}/account/release/search`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      params: {
-        begin_date: dateFrom,
-        end_date:   dateTo,
-        offset,
-        limit:      params.pageSize,
+  try {
+    const { data } = await axios.get(
+      `${BASE_URL}/users/${shopId}/account/release/search`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: {
+          begin_date: dateFrom,
+          end_date:   dateTo,
+          offset,
+          limit:      params.pageSize,
+        },
       },
-    },
-  );
+    );
 
-  const results = data.results ?? [];
+    const results = data.results ?? [];
+    return {
+      items:   results.map(this.normalizeRelease),
+      hasMore: results.length >= params.pageSize,
+    };
 
-  return {
-    items:   results.map(this.normalizeRelease),
-    hasMore: results.length >= params.pageSize,
-  };
+  } catch (err: any) {
+    if (err?.response?.status === 404) {
+      return { items: [], hasMore: false };
+    }
+    throw err;
+  }
 }
 
   async getAllPayments(
