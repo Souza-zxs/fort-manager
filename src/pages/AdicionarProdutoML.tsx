@@ -154,33 +154,35 @@ const AdicionarProdutoML = () => {
       }
 
       // Payload principal (sem descrição)
-      const payload: Record<string, unknown> = {
+      const payload: Record<string, string> = {
         title: formData.title,
         category_id: formData.category_id,
-        price: parseFloat(formData.price),
+        price: formData.price,
         currency_id: formData.currency_id,
-        available_quantity: parseInt(formData.available_quantity),
+        available_quantity: formData.available_quantity,
         buying_mode: formData.buying_mode,
         listing_type_id: formData.listing_type_id,
         condition: formData.condition,
-        description: formData.description.trim()
-          ? { plain_text: formData.description.trim() }
-          : undefined,
-        pictures: formData.pictures.map((url) => ({ source: url })),
-        seller_address: {
-          id: parseInt(selectedAddressId)
-        },
-        sale_terms: [
-          {
-            id: "WARRANTY_TYPE",
-            value_name: "Garantia do vendedor"
-          },
-          {
-            id: "WARRANTY_TIME",
-            value_name: "90 dias"
-          }
-        ]
       };
+
+      // Adicionar descrição se existir
+      if (formData.description.trim()) {
+        payload.description = JSON.stringify({ plain_text: formData.description.trim() });
+      }
+
+      // Adicionar imagens
+      formData.pictures.forEach((url, index) => {
+        payload[`pictures[${index}][source]`] = url;
+      });
+
+      // Endereço do vendedor
+      payload["seller_address[id]"] = selectedAddressId;
+
+      // Termos de venda
+      payload["sale_terms[0][id]"] = "WARRANTY_TYPE";
+      payload["sale_terms[0][value_name]"] = "Garantia do vendedor";
+      payload["sale_terms[1][id]"] = "WARRANTY_TIME";
+      payload["sale_terms[1][value_name]"] = "90 dias";
 
       // Criar o item
       const data = await createMercadoLivreItem(payload);
